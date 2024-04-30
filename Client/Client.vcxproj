@@ -71,16 +71,16 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <IncludePath>C:\Users\2018t\Dev\Projects\Project-3-Preprocessor\Reflection\Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <IncludePath>C:\Users\2018t\Dev\Projects\Project-3-Preprocessor\Reflection\Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>C:\Users\2018t\Dev\Projects\Project-3-Preprocessor\Reflection\Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>C:\Users\2018t\Dev\Projects\Project-3-Preprocessor\Reflection\Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>

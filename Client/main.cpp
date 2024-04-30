@@ -12,7 +12,17 @@
 #include <vector>
 #include <Reflection.h>
 
-class AnotherObject {};
+class AnotherObject 
+{
+	class NestedObject {
+		int mInnerData1;
+		int mInnerData2;
+	};
+
+	int mData1;
+	int mDsata2;
+
+};
 
 class TestObject
 {
