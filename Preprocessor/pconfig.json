@@ -1,0 +1,14 @@
+{
+  "FileExtensions": 
+  [
+    ".cpp",
+    ".cxx",
+    ".c++"
+  ],
+  "AdditionalSourcePath": 
+  [
+    "Source",
+    "Source\\MoreSource"
+  ],
+  "OutputPath": "$(SolutionDir)pout"
+}

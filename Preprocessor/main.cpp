@@ -7,6 +7,7 @@
  * brief:  Entry point for the preproccessor
  *********************************************************************/
 
+// std
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -14,12 +15,16 @@
 #include <chrono>
 #include <filesystem>
 
+// preprocessor
+#include "Preprocessor.hpp"
+#include <Printing.hpp>
+
+#include <chrono>
+
 // reads in the contents of a file
-std::string GetFileContents(const std::string& filename)
+std::string GetFileContents(const std::filesystem::path& filePath)
 {
-    std::filesystem::path parentDir = std::filesystem::current_path().parent_path(); // Get the current working directory
-    std::filesystem::path clientDir = parentDir.append("Client").append(filename);
-    std::ifstream file(clientDir);
+    std::ifstream file(filePath);
     std::string content;
 
     if (file.is_open()) 
@@ -29,7 +34,7 @@ std::string GetFileContents(const std::string& filename)
     }
     else 
     {
-        std::cerr << "Error: Unable to open file " << filename << std::endl;
+        std::cerr << "Error: Unable to open file '" << filePath.filename() << "'" << " at '" << filePath.root_path() << "'" << std::endl;
     }
 
     return content;
@@ -37,35 +42,56 @@ std::string GetFileContents(const std::string& filename)
 
 int main()
 {
-    std::string filename = "main.cpp";
-    std::string contents = GetFileContents(filename);
+    gep::Preprocessor preprocessor;
 
-    size_t containsHeader = contents.find_first_of("#include \"Reflection.h\"");
+    std::filesystem::path targetFile = std::filesystem::current_path().parent_path().append("Client").append("main.cpp");
 
-    if (containsHeader)
-    {
-        size_t pos = 0;
-        size_t count = 0;
+    preprocessor.PreprocessFile(targetFile);
 
-        // word to search for
-        std::string searchstring = "printable";
+    //// read the config file
+    //    // created a json file reader
+    //std::string filename = "main.cpp";
 
-        // scans the file for the given word
-        while ((pos = contents.find(searchstring, pos)) != std::string::npos) 
-        {
-            // gets the value after the search word
-            std::string valueType = contents.substr(pos + searchstring.length() + 1, contents.find_first_of(' ', pos + searchstring.length() + 1) - (pos + searchstring.length() + 1));
-            std::cout << "Type: " << valueType << std::endl;
+    //auto start = std::chrono::steady_clock::now();
 
-            pos += searchstring.length();
-        }
-    }
-    else
-    {
-        std::cerr << "Reflection must be included: '#include \"Reflection.h\"' was not found" << std::endl;
-    }
+    //std::string contents = GetFileContents(filename);
 
-    std::this_thread::sleep_for(std::chrono::seconds(30));
+    //// End the clock
+    //auto end = std::chrono::steady_clock::now();
+
+    //// Calculate the duration
+    //auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
+
+    //// Output the duration
+    //std::cout << "Time taken: " << duration.count() << " milliseconds" << std::endl;
+
+    //size_t containsHeader = contents.find_first_of("#include \"Reflection.h\"");
+
+    //if (containsHeader)
+    //{
+    //    size_t pos = 0;
+    //    size_t count = 0;
+
+    //    // word to search for
+    //    std::string searchstring = "printable";
+
+    //    // scans the file for the given word
+    //    while ((pos = contents.find(searchstring, pos)) != std::string::npos) 
+    //    {
+    //        // gets the value after the search word
+    //        std::string valueType = contents.substr(pos + searchstring.length() + 1, contents.find_first_of(' ', pos + searchstring.length() + 1) - (pos + searchstring.length() + 1));
+    //        std::cout << "Type: " << valueType << std::endl;
+
+    //        pos += searchstring.length();
+    //    }
+    //}
+    //else
+    //{
+    //    std::cerr << "Reflection must be included: '#include \"Reflection.h\"' was not found" << std::endl;
+    //}
+
+    std::string wait;
+    std::cin >> wait;
 
     return 0;
 }

@@ -4,11 +4,16 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.8.34511.84
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Preprocessor", "Preprocessor\Preprocessor.vcxproj", "{1E0819C8-5D60-446E-992D-ACD993B31689}"
+	ProjectSection(ProjectDependencies) = postProject
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8} = {E73DF967-6AFF-4B36-ABAA-8D70376A91A8}
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Client", "Client\Client.vcxproj", "{C4B108A6-DC27-42E0-A0F3-74FCF4109950}"
 	ProjectSection(ProjectDependencies) = postProject
 		{1E0819C8-5D60-446E-992D-ACD993B31689} = {1E0819C8-5D60-446E-992D-ACD993B31689}
 	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Printing", "Printing\Printing.vcxproj", "{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -34,6 +39,14 @@ Global
 		{C4B108A6-DC27-42E0-A0F3-74FCF4109950}.Release|x64.Build.0 = Release|x64
 		{C4B108A6-DC27-42E0-A0F3-74FCF4109950}.Release|x86.ActiveCfg = Release|Win32
 		{C4B108A6-DC27-42E0-A0F3-74FCF4109950}.Release|x86.Build.0 = Release|Win32
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Debug|x64.ActiveCfg = Debug|x64
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Debug|x64.Build.0 = Debug|x64
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Debug|x86.ActiveCfg = Debug|Win32
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Debug|x86.Build.0 = Debug|Win32
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Release|x64.ActiveCfg = Release|x64
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Release|x64.Build.0 = Release|x64
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Release|x86.ActiveCfg = Release|Win32
+		{E73DF967-6AFF-4B36-ABAA-8D70376A91A8}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

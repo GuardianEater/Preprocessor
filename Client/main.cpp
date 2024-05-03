@@ -1,10 +1,9 @@
-/*********************************************************************
- * file:   main.cpp
- * author: travis.gronvold (travis.gronvold@digipen.edu)
- * date:   March 25, 2024
- * Copyright © 2023 DigiPen (USA) Corporation. 
+/*****************************************************************//**
+ * \file   main.cpp
+ * \brief  
  * 
- * brief:  Example of how to use the reflection
+ * \author 2018t
+ * \date   May 2024
  *********************************************************************/
 
 #include <thread>
