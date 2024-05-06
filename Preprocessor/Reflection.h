@@ -9,6 +9,20 @@
 
 #pragma once
 
+#include <Printing.hpp>
+
+// hide this
+
+namespace gep
+{
+	std::string GetReflectionFileName()
+	{
+		static const std::filesystem::path path = __FILE__;
+
+		return path.filename().string();
+	}
+}
+
 // used prior to a variable declaration: printable int Value;
-#define printable
-#define serializable
+#define printable    // friend class gep::detail::Printer<int>;
+#define serializable // friend class gep::Serializer;

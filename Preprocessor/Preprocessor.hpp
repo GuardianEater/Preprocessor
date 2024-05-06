@@ -52,6 +52,12 @@ namespace gep
 
 
 	private:
-		std::list<std::string> mFiles;
+
+		// helper for PreprocessFile, determines if the file being preprocessed has the reflection include
+		bool HasInclude(const std::string& fileContents) const;
+
+		void RemoveComments(std::string& fileContents) const;
+
+		std::vector<std::string> mTokens;
 	};
 } // namespace gep

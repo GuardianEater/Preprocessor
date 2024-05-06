@@ -16,37 +16,61 @@
 
 #include <vector>
 #include <list>
+#include <deque>
 
 #include <string>
 #include <iostream>
 #include <type_traits>
+#include <ios>
 
 namespace gep
 {
+    // backend implementation
     namespace detail
     {
-        // evaluates to this for everything that is not a container
+        // compares the outermost type of a template, the following: vector<int> == vector<double>, evaluates to true
         template <template<typename...> typename Container, typename Type>
-        struct is_container : std::false_type {};
+        struct is_similar : std::false_type {};
 
-        // checks if the second type and first type match
         template <template<typename...> typename Container, typename... Args>
-        struct is_container<Container, Container<Args...>> : std::true_type {};
+        struct is_similar<Container, Container<Args...>> : std::true_type {};
 
-        // enables a template if the passed type is a container of a specific type
+        // enables if two items are similar, uses is_similar
         template <template<typename...> typename Container, typename... Args>
-        using enable_if_container = typename std::enable_if<is_container<Container, Args...>::value>::type;
+        using enable_if_similar = typename std::enable_if<is_similar<Container, Args...>::value>::type;
 
-        // if the passed in type does not have a operator<< it will derive from false type
+
+
+        // returns true if the type has public facing iterator 
+        template <typename T, typename = void>
+        struct has_iterator : std::false_type {};
+
+        template <typename T>
+        struct has_iterator<T, std::void_t<typename T::iterator>> : std::true_type {};
+
+
+
+        // checks if the given type has the member function begin and end
+        template <typename T, typename = void>
+        struct has_begin_end : std::false_type {};
+
+        template <typename T>
+        struct has_begin_end<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+
+
+
+        // checks if the given type has an operator<<
         template<typename T, typename = void>
         struct has_output_operator : std::false_type {};
 
-        // if the passed in type does have a operator<< it will derive from true type
         template<typename Type>
         struct has_output_operator<Type, std::void_t<decltype(std::declval<std::ostream&>() << std::declval<Type>())>> : std::true_type {};
 
+        // enables if the given type has an operator<<, uses has_output_operator
         template<typename Type>
         using enable_if_outable = typename std::enable_if<has_output_operator<Type>::value>::type;
+
+
 
         // stream insert prior to printing to change color
         namespace Color
@@ -67,7 +91,7 @@ namespace gep
         template<typename Type, typename Enable = void>
         struct Printer
         {
-            static std::ostream& Print(std::ostream& os, const Type& item)
+            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
                 os << Color::RED << "Attempting to print an unsupported Type" << Color::RESET;
 
@@ -79,7 +103,7 @@ namespace gep
         template<typename Type>
         struct Printer<Type, enable_if_outable<Type>>
         {
-            static std::ostream& Print(std::ostream& os, const Type& item)
+            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
                 os << Color::PEACH << item << Color::RESET;
 
@@ -89,14 +113,14 @@ namespace gep
 
         // printer for vector type
         template<typename Type>
-        struct Printer<Type, enable_if_container<std::vector, Type>>
+        struct Printer<Type, enable_if_similar<std::vector, Type>>
         {
-            static std::ostream& Print(std::ostream& os, const Type& item)
+            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
                 os << Color::GREEN << "Vector: {" << Color::RESET;
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
-                    Printer<typename Type::value_type>::Print(os, *currentIt);
+                    Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
 
                     // prints a comma and a space after every element except the last
                     if (currentIt != std::prev(item.end(), 1))
@@ -112,14 +136,14 @@ namespace gep
 
         // printer for set type
         template<typename Type>
-        struct Printer<Type, enable_if_container<std::set, Type>>
+        struct Printer<Type, enable_if_similar<std::set, Type>>
         {
-            static std::ostream& Print(std::ostream& os, const Type& item)
+            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
                 os << Color::GREEN << "Set: {" << Color::RESET;
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
-                    Printer<typename Type::value_type>::Print(os, *currentIt);
+                    Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
 
                     // prints a comma and a space after every element except the last
                     if (currentIt != std::prev(item.end(), 1))
@@ -133,100 +157,144 @@ namespace gep
             };
         };
 
+        template<typename Type, typename Stream>
+        Stream& out_color(const Type& item, Stream& os, size_t indent, const std::string& color)
+        {
+            os << std::string(indent, ' ') << color << item << Color::RESET;
+
+            return os;
+        }
+
+        template<typename Type, typename Stream>
+        Stream& basic_print(const Type& item, Stream& os, size_t indent)
+        {
+            // evaluates the type of the container ////////////////////////////////////////////////////
+
+            // simples
+            constexpr bool isVector = is_similar<std::vector, Type>::value;
+            constexpr bool isList   = is_similar<std::list, Type>::value;
+            constexpr bool isDeque  = is_similar<std::deque, Type>::value;
+
+            // set
+            constexpr bool isOrderSet = is_similar<std::set, Type>::value;
+            constexpr bool isUnordSet = is_similar<std::unordered_set, Type>::value;
+            constexpr bool isMultiSet = is_similar<std::multiset, Type>::value;
+
+            // map                      
+            constexpr bool isOrderMap = is_similar<std::map, Type>::value;
+            constexpr bool isUnordMap = is_similar<std::unordered_map, Type>::value;
+            constexpr bool isMultiMap = is_similar<std::multimap, Type>::value;
+
+            // other
+            constexpr bool isPair   = is_similar<std::pair, Type>::value;
+            constexpr bool isSimple = has_output_operator<Type>::value;
+
+            // strings
+            constexpr bool isString  = std::is_same<std::string, Type>::value;
+            constexpr bool isWString = std::is_same<std::wstring, Type>::value;
+
+            // containers
+            constexpr bool isIterable = has_begin_end<Type>::value;
+
+
+
+            // gets the name of the container /////////////////////////////////////////////////////////
+
+            // the name of the container to be printed later
+            std::string name = "Container";
+
+            // simples
+            if      constexpr (isVector) name = "Vector";
+            else if constexpr (isList)   name = "List";
+            else if constexpr (isList)   name = "Deque";
+
+            // sets
+            else if constexpr (isOrderSet) name = "Set";
+            else if constexpr (isUnordSet) name = "UnorderedSet";
+            else if constexpr (isMultiSet) name = "MultiSet";
+
+            // maps
+            else if constexpr (isOrderMap) name = "Map";
+            else if constexpr (isUnordMap) name = "UnorderedMap";
+            else if constexpr (isMultiMap) name = "MultiMap";
+
+            // other
+            else if constexpr (isPair)   name = "Pair";
+            else if constexpr (isString) name = "String";
+
+            // determine how to print each container //////////////////////////////////////////////////
+
+            constexpr size_t indentAmount = 2;
+
+            // simple items
+            if constexpr (isSimple)
+            {
+                out_color(item, os, indent, Color::PEACH);
+            }
+
+            // iterable data stuctures
+            else if constexpr (isIterable)
+            {
+                // prints the name and the leading squiggly
+                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
+                out_color("{", os, indent, Color::GREEN) << std::endl;
+
+                // iterate each element recursively calling print on each element
+                for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
+                {
+                    basic_print(*currentIt, os, indent + indentAmount) << std::endl;
+                }
+
+                out_color("}", os, indent, Color::GREEN);
+            }
+
+            // pairs
+            else if constexpr (isPair)
+            {
+                // prints the name and the leading squiggly
+                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
+                out_color("{", os, indent, Color::GREEN) << std::endl;
+
+                // print the contents of the pair
+                basic_print(item.first, os, indent + indentAmount) << std::endl;
+                basic_print(item.second, os, indent + indentAmount) << std::endl;
+
+                out_color("}", os, indent, Color::GREEN);
+            }
+
+            // invalid items
+            else
+            {
+                out_color("Attempting to print an unsupported Type", os, indent, Color::RED);
+            }
+
+            return os;
+        }
 
     } // namespace detail
 
     // prints out containers/types recursively
     template <typename Type>
-    std::ostream& Print(std::ostream& os, const Type& item)
+    std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
     {
-        detail::Printer<Type>::Print(os, item);
+        detail::Printer<Type>::Print_DEPRICATED(item, os);
 
         return os;
     }
 
     template<typename Type>
-    std::ostream& Print_depricated(std::ostream& os, const Type& item)
+    std::ostream& Print(const Type& item, std::ostream& os = std::cout)
     {
-        // evaluates the type of the container ////////////////////////////////////////////////////
-
-        // simples
-        constexpr bool isVector   = detail::is_container<std::vector,        Type>::value;
-        constexpr bool isList     = detail::is_container<std::list,          Type>::value;
-        constexpr bool isSimple   = detail::has_output_operator<             Type>::value;
-
-        // set
-        constexpr bool isOrderSet = detail::is_container<std::set,           Type>::value;
-        constexpr bool isUnordSet = detail::is_container<std::unordered_set, Type>::value;
-        constexpr bool isMultiSet = detail::is_container<std::multiset,      Type>::value;
-                                    
-        // map                      
-        constexpr bool isOrderMap = detail::is_container<std::map,           Type>::value;
-        constexpr bool isUnordMap = detail::is_container<std::unordered_map, Type>::value;
-        constexpr bool isMultiMap = detail::is_container<std::multimap,      Type>::value;
-
-
-        // gets the name of the container /////////////////////////////////////////////////////////
-
-        // the name of the container to be printed later
-        std::string name;
-
-        // simples
-             if constexpr (isVector) name = "Vector";
-        else if constexpr (isList)   name = "List";
-
-        // sets
-        else if constexpr (isOrderSet) name = "Set";
-        else if constexpr (isUnordSet) name = "UnorderedSet";
-        else if constexpr (isMultiSet) name = "MultiSet";
-
-        // maps
-        else if constexpr (isOrderMap) name = "Map";
-        else if constexpr (isUnordMap) name = "UnorderedMap";
-        else if constexpr (isMultiMap) name = "MultiMap";
-
-
-        // determine how to print each container //////////////////////////////////////////////////
-
-        if constexpr (isVector)
-        {
-            os << detail::Color::GREEN << name << ": {" << detail::Color::RESET;
-            for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
-            {
-                Print(os, *currentIt);
-
-                // prints a comma and a space after every element except the last
-                if (currentIt != std::prev(item.end(), 1))
-                {
-                    os << detail::Color::GREEN << ", " << detail::Color::RESET;
-                }
-            }
-            os << detail::Color::GREEN << "}" << detail::Color::RESET;
-        }
-        else if constexpr (isOrderSet || isUnordSet)
-        {
-            os << detail::Color::GREEN << name << ": {" << detail::Color::RESET;
-            for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
-            {
-                Print(os, *currentIt);
-
-                // prints a comma and a space after every element except the last
-                if (currentIt != std::prev(item.end(), 1))
-                {
-                    os << detail::Color::GREEN << ", " << detail::Color::RESET;
-                }
-            }
-            os << detail::Color::GREEN << "}" << detail::Color::RESET;
-        }
-        else if constexpr (isSimple)
-        {
-            os << detail::Color::PEACH << item << detail::Color::RESET;
-        }
-        else
-        {
-            os << detail::Color::RED << "Attempting to print an unsupported Type" << detail::Color::RESET;
-        }
+        detail::basic_print(item, os, 0);
 
         return os;
     }
+
+    //template<typename Type>
+    //std::wostream& PrintW(const Type& item, std::wostream& wos = std::wcout)
+    //{
+    //    detail::basic_print(item, wos, 0);
+
+    //    return wos;
+    //}
 }
