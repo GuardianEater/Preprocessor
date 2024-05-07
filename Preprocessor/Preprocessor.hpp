@@ -52,12 +52,40 @@ namespace gep
 
 
 	private:
+		// reads the given file into a buffer
+		inline bool ReadFile(const std::filesystem::path& path);
 
 		// helper for PreprocessFile, determines if the file being preprocessed has the reflection include
-		bool HasInclude(const std::string& fileContents) const;
+		inline bool HasInclude() const;
 
-		void RemoveComments(std::string& fileContents) const;
+		// replaces all user defined character strings with '$'
+		inline void MaskStrings();
+
+		// restores all of the '$' added by MaskStrings
+		inline void RestoreStrings();
+
+		// removes all comments from the internal buffer
+		inline void RemoveComments();
+
+		// adds padding and removes extra spaces
+		inline void NormalizeSpaces();
+
+		// removes all duplicate spaces
+		inline void RemoveExtraSpaces();
+
+		// adds spaces to both sides of all occurences of 'padword'
+		inline void AddPadding(std::string& fileContents, const std::string& padword) const;
+
+		// finds the first that shows up in fileContents 
+		inline size_t FindFirstString(const std::string& fileContents, const std::vector<std::string>& strings, size_t start = 0) const;
+
+	private:
+		std::string mFileContents;
 
 		std::vector<std::string> mTokens;
+
+		std::string mRemovedStrings;
+
+		//std::vector<std::string> mRemovedStrings;
 	};
 } // namespace gep

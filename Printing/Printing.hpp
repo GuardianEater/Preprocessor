@@ -18,6 +18,12 @@
 #include <list>
 #include <deque>
 
+#include <stack>
+#include <queue>
+
+#include <initializer_list>
+#include <tuple>
+
 #include <string>
 #include <iostream>
 #include <type_traits>
@@ -185,6 +191,10 @@ namespace gep
             constexpr bool isUnordMap = is_similar<std::unordered_map, Type>::value;
             constexpr bool isMultiMap = is_similar<std::multimap, Type>::value;
 
+            // stack/queue
+            constexpr bool isStack = is_similar<std::stack, Type>::value;
+            constexpr bool isQueue = is_similar<std::queue, Type>::value;
+
             // other
             constexpr bool isPair   = is_similar<std::pair, Type>::value;
             constexpr bool isSimple = has_output_operator<Type>::value;
@@ -194,7 +204,7 @@ namespace gep
             constexpr bool isWString = std::is_same<std::wstring, Type>::value;
 
             // containers
-            constexpr bool isIterable = has_begin_end<Type>::value;
+            constexpr bool isIterable        = has_begin_end<Type>::value;
 
 
 
@@ -222,6 +232,11 @@ namespace gep
             else if constexpr (isPair)   name = "Pair";
             else if constexpr (isString) name = "String";
 
+            // stack/queue
+            else if constexpr (isQueue) name = "Queue";
+            else if constexpr (isStack) name = "Stack";
+
+
             // determine how to print each container //////////////////////////////////////////////////
 
             constexpr size_t indentAmount = 2;
@@ -243,6 +258,30 @@ namespace gep
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
                     basic_print(*currentIt, os, indent + indentAmount) << std::endl;
+                }
+
+                out_color("}", os, indent, Color::GREEN);
+            }
+
+            // prints stacks and queues differently because the dont have direct member access
+            else if constexpr (isQueue || isStack)
+            {
+                // prints the name and the leading squiggly
+                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
+                out_color("{", os, indent, Color::GREEN) << std::endl;
+
+                // create a temporary so the original is not modified
+                Type temp = item;
+
+                // pop items from the temp and print them one by one
+                while (!temp.empty()) 
+                {
+                    // prints the elements using the coresponding data structure function
+                    if constexpr (isQueue) basic_print(temp.front(), os, indent + indentAmount) << std::endl;
+                    else                   basic_print(temp.top(),   os, indent + indentAmount) << std::endl;
+
+                    // removes the item from the temp
+                    temp.pop();
                 }
 
                 out_color("}", os, indent, Color::GREEN);
