@@ -1,6 +1,7 @@
 ## Idea
 - I want to create a program that can be ran on source code prior to compilation to allow for more powerful code generation.
 - I want to have a friendly user interface so there are no nasty macros wrapping code everywhere pretending to be reflection.
+- Although I want this to be performant, this is designed to be a powerful debugging tool.
 
 ## Usage
 ```cpp
