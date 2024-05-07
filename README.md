@@ -18,6 +18,7 @@ public:
 
 private:
   serializable int mData;
+  int mMoreData;
 };
 
 main()
