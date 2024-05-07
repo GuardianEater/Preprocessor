@@ -21,7 +21,7 @@ private:
   int mMoreData;
 };
 
-main()
+int main()
 {
   ExampleClass obj;
   gep::print(obj);
