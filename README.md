@@ -9,7 +9,7 @@
 class ExampleClass
 {
 public:
-  ExampleClass() : mData(7) {}
+  ExampleClass() : mData(7), mMoreData(10) {}
 
   void SetData(int newData)
   {
