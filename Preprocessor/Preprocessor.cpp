@@ -35,6 +35,7 @@ namespace gep
 {
     Preprocessor::Preprocessor()
     {
+        // preallocate some space for strings 
         mRemovedStrings.reserve(1024llu);
     }
 
@@ -63,6 +64,8 @@ namespace gep
         // starts a timer to measure file process speed
         Timer timer;
         timer.Start();
+
+        const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
         
         // reads in the data from the given file
         if (!ReadFile(path))
@@ -89,56 +92,98 @@ namespace gep
         // adds a bunch of padding and removes excess spaces
         NormalizeSpaces();
 
-        // tokenizes the fileContents
+        //tokenizes the fileContents
+        std::string token;
         std::stringstream fCs(mFileContents);
         while (fCs >> mTokens.emplace_back());
 
-        //gep::Print(mTokens);
+        // helpers to maintain scope
+        std::unordered_set<std::string> namedScopes = { "class", "namespace", "struct" };
+        std::vector<std::string> currentScope;
+        size_t currentScopeLevel = 0;
 
-        //size_t nameEnd = 0;
-        //size_t stack = 0;
-        //while (true)
-        //{
-        //    size_t closestStart = FindFirstString(fileContents, { "class", "namespace", "struct", "}"}, nameEnd);
+        std::vector<MetaInfo> metaInfos;
 
-        //    // if there are none of the search terms back out
-        //    if (closestStart == std::string::npos) break;
+        // creates a MetaInfo vector
+        for (size_t i = 0; i < mTokens.size(); i++)
+        {
+            // maintains the current scope
+            if (mTokens[i] == "{")
+            {
+                // if a named scope was named add it name to the current scope
+                if (namedScopes.contains(mTokens[i - 2]))
+                {
+                    currentScope.push_back(mTokens[i - 1]);
+                }
 
-        //    if (fileContents.at(closestStart) == '}')
-        //    {
-        //        stack--;
-        //        nameEnd++;
-        //        continue;
-        //    }
+                currentScopeLevel++;
+            }
+            else if (mTokens[i] == "}")
+            {
+                // if the current scope is a named scope remove it
+                if (currentScopeLevel == currentScope.size())
+                {
+                    currentScope.pop_back();
+                }
 
-        //    // finds the end of the found item
-        //    size_t closestEnd = fileContents.find_first_of(" \n{", closestStart);
+                currentScopeLevel--;
+            }
 
-        //    // in the case of a nameless namespace do nothing
-        //    if (fileContents.at(closestEnd) == '{')
-        //    {
-        //        nameEnd++;
-        //        continue;
-        //    }
+            // must be inside of a class
+            if (currentScopeLevel != currentScope.size()) continue;
+            
+            // token must be recognized
+            if (!metaKeyWords.contains(mTokens[i])) continue;
+            
+            // creats a meta info object
+            MetaInfo& meta = metaInfos.emplace_back();
 
-        //    // gets the name after the found item
-        //    size_t nameStart  = fileContents.find_first_not_of(" \n", closestEnd);
-        //    nameEnd = fileContents.find_first_of("{;", nameStart);
+            // sets its class to the current scope
+            meta.mParentClass = currentScope.back();
 
-        //    if (fileContents.at(nameEnd) == '{')
-        //    {
-        //        stack++;
-        //    }
-        //    std::string name = fileContents.substr(nameStart, nameEnd - nameStart);
+            // sets the full class path to all previous scopes
+            for (int j = 0; j < currentScope.size() - 1; j++)
+            {
+                meta.mFullClassPath += currentScope[j] + "::";
+            }
+            meta.mFullClassPath += meta.mParentClass;
 
-        //    gep::Print(name) << std::endl;
-        //    gep::Print(stack) << std::endl;
-        //    
-        //}
+            // move past 'keyword'
+            i++;
+
+            // collect all variable specifiers
+            std::vector<std::string> variableInfo;
+            while (mTokens[i] != ";" && mTokens[i] != "=")
+            {
+                variableInfo.push_back(mTokens[i]);
+                i++;
+            }
+
+            // the last item in the variableinfo will always be the variable name
+            meta.mVariableName = variableInfo.back();
+                    
+            // everything else is the type of the varible
+            for (int j = 0; j < variableInfo.size() - 1; j++)
+            {
+                meta.mType += variableInfo[j] + " ";
+            }
+            
+        }
+
+        // loop through all meta info a generate a template function for them
+        for (int i = 0; i < metaInfos.size(); i++)
+        {
+            CreateTemplate(metaInfos[i]);
+        }
+
+        gep::Print(mClassMap);
+
+        //gep::Print(metaInfos);
+
+
 
         // undoes MaskStrings()
         RestoreStrings();
-
 
         std::ofstream outFile("Generated\\normalized.cpp");
         gep::Print(mFileContents, outFile);
@@ -353,6 +398,11 @@ namespace gep
         AddPadding(mFileContents, "struct");
         AddPadding(mFileContents, "class");
         AddPadding(mFileContents, "=");
+
+        // keywords
+        AddPadding(mFileContents, "serializable");
+        AddPadding(mFileContents, "printable");
+
         // Note: cannot add a "\"" case because it would add spaces to the inside of a comment
 
         // not necessary but should in theory make tokenization faster
@@ -376,6 +426,59 @@ namespace gep
             previous = mFileContents[i];
             i++;
         }
+    }
+
+    void Preprocessor::CreateTemplate(const MetaInfo& mi)
+    {
+        // if it already exists
+        bool existingClass = mClassMap.contains(mi.mFullClassPath);
+
+        std::list<std::string>& lines = mClassMap[mi.mFullClassPath];
+
+        // helpers to easily write lines to the function
+        auto write_ForwardDeclaration = [&]() -> void
+            {
+                lines.push_back(std::string("class ") + mi.mParentClass + ";");
+            };
+
+        auto write_FunctionDefinition = [&]() -> void
+            {
+                lines.push_back(std::string("template<> ") + "inline void gep::json::File::Read(" + mi.mParentClass + "& item) const" + "{");
+            };
+
+        auto write_Header = [&]() -> void
+            {
+                lines.push_back(std::string("std::cout << \"") + mi.mParentClass + "\" << \":\" << std::endl;");
+            };
+
+        auto write_Contents = [&](size_t location) -> void
+            {
+                lines.insert(std::next(lines.begin(), location), std::string("std::cout << \"") + mi.mVariableName + " = \" << item." + mi.mVariableName + " << \":\" << std::endl;");
+            };
+
+        auto write_Finish = [&]() -> void
+            {
+                lines.push_back("}");
+            };
+
+        if (existingClass)
+        {
+            write_Contents(2);
+        }
+        else
+        {
+            write_ForwardDeclaration();
+            write_FunctionDefinition();
+            write_Header();
+            write_Contents(2);
+            write_Finish();
+        }
+
+        //std::string result;
+        //// converts the list into a string
+        //for (const std::string& line : lines) result += "\n" + line;
+
+        //return result;
     }
     
     void Preprocessor::AddPadding(std::string& fileContents, const std::string& padword) const
@@ -412,5 +515,15 @@ namespace gep
         }
 
         return found;
+    }
+
+    std::ostream& operator<<(std::ostream& os, const Preprocessor::MetaInfo& info)
+    {
+        os << "Type = "  << info.mType          << std::endl;
+        os << "Name = "  << info.mVariableName  << std::endl;
+        os << "Path = "  << info.mFullClassPath << std::endl;
+        os << "Class = " << info.mParentClass   << std::endl;
+
+        return os;
     }
 }

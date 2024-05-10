@@ -20,6 +20,7 @@
 
 // printing
 #include <Printing.hpp>
+#include <Serializing.hpp>
 
 // reflection
 #include <Reflection.h>
@@ -30,13 +31,26 @@
 // test object with 2 datas inside
 class AnotherObject
 {
+public:
 	// a nested object with 2 more datas inside
 	class NestedObject 
 	{
+		using prair = std::pair<std::string, size_t>;
+		using str = std::string;
+		
 		int mInnerData1;
 		int mInnerData2;
+
+		struct NestedStruct{int mDeeperData1;int mDeeperData2;};
+
+		class NestedClass
+		{
+			printable int mDeeperData1;
+			int mDeeperData2;
+		};
 	};
-	
+
+private:
 	int mData1;
 	int mDsata2;
 
@@ -50,7 +64,7 @@ public:
 	TestObject() = default;
 
 private:
-	printable int mInt;
+	printable static int mInt;
 	printable double mDouble;
 	printable size_t mSize;
 	printable AnotherObject mObject;
@@ -172,11 +186,26 @@ static void test_print()
 
 }
 
+static void test_template()
+{
+	gep::json::File file;
+
+	int eight = 8;
+	file.Read(eight);
+
+	AnotherObject obj;
+	file.Read(obj);
+
+	AnotherObject::NestedObject nObj;
+	file.Read(nObj);
+}
+
 int main()
 {
 	std::cout << "Hello" << std::endl;
 
-	test_print();
+	//test_print();
+	test_template();
 
 	std::string wait;
 	std::cin >> wait;

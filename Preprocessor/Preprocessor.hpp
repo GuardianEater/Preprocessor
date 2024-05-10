@@ -11,8 +11,10 @@
 // std
 #include <vector> 
 #include <list>
+#include <map>
 #include <string>
 #include <filesystem>
+#include <iostream>
 
 /**
  * \brief designed to be ran on a visual studio project.
@@ -49,7 +51,19 @@ namespace gep
 
 		void PreprocessFile(const std::filesystem::path& path);
 
+	public:
 
+		// stores info about reflected types
+		struct MetaInfo
+		{
+			std::string mType;
+			std::string mVariableName;
+			std::string mParentClass;
+			std::string mFullClassPath;
+
+			friend std::ostream& operator<<(std::ostream& os, const MetaInfo& info);
+
+		};
 
 	private:
 		// reads the given file into a buffer
@@ -73,6 +87,9 @@ namespace gep
 		// removes all duplicate spaces
 		inline void RemoveExtraSpaces();
 
+		// creates a template in valid cpp code, if the mi's class path has already been written too will simply add to it
+		inline void CreateTemplate(const MetaInfo& mi);
+
 		// adds spaces to both sides of all occurences of 'padword'
 		inline void AddPadding(std::string& fileContents, const std::string& padword) const;
 
@@ -85,6 +102,9 @@ namespace gep
 		std::vector<std::string> mTokens;
 
 		std::string mRemovedStrings;
+
+		// this is the classPath mapped to the function of that class split up into lines
+		std::map<std::string, std::list<std::string>> mClassMap;
 
 		//std::vector<std::string> mRemovedStrings;
 	};

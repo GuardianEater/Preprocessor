@@ -28,8 +28,8 @@ namespace gep
 			return std::chrono::duration_cast<duration_t>(clock_t::now() - mStartTime).count();
 		}
 
-		template <typename Type2>
-		friend std::ostream& operator<<(std::ostream& os, const Timer<Type2>& timer);
+		template <typename T>
+		friend std::ostream& operator<<(std::ostream& os, const Timer<T>& timer);
 
 	private:
 		using clock_t = std::chrono::high_resolution_clock;
@@ -38,8 +38,8 @@ namespace gep
 		std::chrono::time_point<clock_t> mStartTime;
 	};
 
-	template <typename Type>
-	std::ostream& operator<<(std::ostream& os, const Timer<Type>& timer)
+	template <typename TimeMeasure>
+	std::ostream& operator<<(std::ostream& os, const Timer<TimeMeasure>& timer)
 	{
 		os << "Time Elapsed: " << std::setprecision(6) << timer.Stop() << std::endl;
 
