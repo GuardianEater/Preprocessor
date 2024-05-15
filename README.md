@@ -25,6 +25,8 @@ private:
 ```
 ### main.cpp
 ```cpp
+#include "main.hpp"
+
 int main()
 {
   ExampleClass obj;
