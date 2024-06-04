@@ -31,6 +31,21 @@
 
 namespace gep
 {
+    // stream insert prior to printing to change color
+    namespace color
+    {
+        // must be used to change the color back to normal
+        const std::string RESET   = "\033[0m";
+
+        const std::string RED     = "\033[31m";
+        const std::string GREEN   = "\033[32m";
+        const std::string YELLOW  = "\033[33m";
+        const std::string BLUE    = "\033[34m";
+        const std::string MAGENTA = "\033[35m";
+        const std::string CYAN    = "\033[36m";
+        const std::string PEACH   = "\033[38;5;208m";
+    };
+
     // backend implementation
     namespace detail
     {
@@ -78,28 +93,13 @@ namespace gep
 
 
 
-        // stream insert prior to printing to change color
-        namespace Color
-        {
-            // must be used to change the color back to normal
-            const std::string RESET   = "\033[0m";
-
-            const std::string RED     = "\033[31m";
-            const std::string GREEN   = "\033[32m";
-            const std::string YELLOW  = "\033[33m";
-            const std::string BLUE    = "\033[34m";
-            const std::string MAGENTA = "\033[35m";
-            const std::string CYAN    = "\033[36m";
-            const std::string PEACH   = "\033[38;5;208m";
-        };
-
         // default class for the printer if it is an unprintable type it will crash here
         template<typename Type, typename Enable = void>
         struct Printer
         {
             static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
-                os << Color::RED << "Attempting to print an unsupported Type" << Color::RESET;
+                os << color::RED << "Attempting to print an unsupported Type" << color::RESET;
 
                 return os;
             };
@@ -111,7 +111,7 @@ namespace gep
         {
             static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
-                os << Color::PEACH << item << Color::RESET;
+                os << color::PEACH << item << color::RESET;
 
                 return os;
             };
@@ -123,7 +123,7 @@ namespace gep
         {
             static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
-                os << Color::GREEN << "Vector: {" << Color::RESET;
+                os << color::GREEN << "Vector: {" << color::RESET;
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
                     Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
@@ -131,10 +131,10 @@ namespace gep
                     // prints a comma and a space after every element except the last
                     if (currentIt != std::prev(item.end(), 1))
                     {
-                        os << Color::GREEN << ", " << Color::RESET;
+                        os << color::GREEN << ", " << color::RESET;
                     }
                 }
-                os << Color::GREEN << "}" << Color::RESET;
+                os << color::GREEN << "}" << color::RESET;
 
                 return os;
             };
@@ -146,7 +146,7 @@ namespace gep
         {
             static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
             {
-                os << Color::GREEN << "Set: {" << Color::RESET;
+                os << color::GREEN << "Set: {" << color::RESET;
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
                     Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
@@ -154,10 +154,10 @@ namespace gep
                     // prints a comma and a space after every element except the last
                     if (currentIt != std::prev(item.end(), 1))
                     {
-                        os << Color::GREEN << ", " << Color::RESET;
+                        os << color::GREEN << ", " << color::RESET;
                     }
                 }
-                os << Color::GREEN << "}" << Color::RESET;
+                os << color::GREEN << "}" << color::RESET;
 
                 return os;
             };
@@ -166,7 +166,7 @@ namespace gep
         template<typename Type, typename Stream>
         Stream& out_color(const Type& item, Stream& os, size_t indent, const std::string& color)
         {
-            os << std::string(indent, ' ') << color << item << Color::RESET;
+            os << std::string(indent, ' ') << color << item << color::RESET;
 
             return os;
         }
@@ -244,15 +244,15 @@ namespace gep
             // simple items
             if constexpr (isSimple)
             {
-                out_color(item, os, indent, Color::PEACH);
+                out_color(item, os, indent, color::PEACH);
             }
 
             // iterable data stuctures
             else if constexpr (isIterable)
             {
                 // prints the name and the leading squiggly
-                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
-                out_color("{", os, indent, Color::GREEN) << std::endl;
+                out_color(name + ":", os, indent, color::GREEN) << std::endl;
+                out_color("{", os, indent, color::GREEN) << std::endl;
 
                 // iterate each element recursively calling print on each element
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
@@ -260,15 +260,15 @@ namespace gep
                     basic_print(*currentIt, os, indent + indentAmount) << std::endl;
                 }
 
-                out_color("}", os, indent, Color::GREEN);
+                out_color("}", os, indent, color::GREEN);
             }
 
             // prints stacks and queues differently because the dont have direct member access
             else if constexpr (isQueue || isStack)
             {
                 // prints the name and the leading squiggly
-                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
-                out_color("{", os, indent, Color::GREEN) << std::endl;
+                out_color(name + ":", os, indent, color::GREEN) << std::endl;
+                out_color("{", os, indent, color::GREEN) << std::endl;
 
                 // create a temporary so the original is not modified
                 Type temp = item;
@@ -284,27 +284,27 @@ namespace gep
                     temp.pop();
                 }
 
-                out_color("}", os, indent, Color::GREEN);
+                out_color("}", os, indent, color::GREEN);
             }
 
             // pairs
             else if constexpr (isPair)
             {
                 // prints the name and the leading squiggly
-                out_color(name + ":", os, indent, Color::GREEN) << std::endl;
-                out_color("{", os, indent, Color::GREEN) << std::endl;
+                out_color(name + ":", os, indent, color::GREEN) << std::endl;
+                out_color("{", os, indent, color::GREEN) << std::endl;
 
                 // print the contents of the pair
                 basic_print(item.first, os, indent + indentAmount) << std::endl;
                 basic_print(item.second, os, indent + indentAmount) << std::endl;
 
-                out_color("}", os, indent, Color::GREEN);
+                out_color("}", os, indent, color::GREEN);
             }
 
             // invalid items
             else
             {
-                out_color("Attempting to print an unsupported Type", os, indent, Color::RED);
+                out_color("Attempting to print an unsupported Type", os, indent, color::RED);
             }
 
             return os;

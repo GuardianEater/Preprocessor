@@ -20,150 +20,30 @@
 
 // printing
 #include <Printing.hpp>
-#include <Serializing.hpp>
-
-// reflection
-#include <Reflection.h>
+#include <OutStream.hpp>
 
 // random numbers
 #include "Random.hpp"
 
-// test object with 2 datas inside
-class AnotherObject
-{
-public:
-	// a nested object with 2 more datas inside
-	class NestedObject 
-	{
-		using prair = std::pair<std::string, size_t>;
-		using str = std::string;
-		
-		int mInnerData1;
-		int mInnerData2;
+// this
+#include <main.hpp>
 
-		struct NestedStruct{int mDeeperData1;int mDeeperData2;};
-
-		class NestedClass
-		{
-			printable int mDeeperData1;
-			int mDeeperData2;
-		};
-	};
-
-private:
-	int mData1;
-	int mDsata2;
-
-};namespace{const std::string david="hello";}class MtS{};class 
-StM 
-;
-
-class /* odd place to put a commment */ TestObject
-{
-public:
-	TestObject() = default;
-
-private:
-	printable static int mInt;
-	printable double mDouble;
-	printable size_t mSize;
-	printable AnotherObject mObject;
-	printable int mAnotherInt;
-	printable std::vector<AnotherObject*> mSutff;
-};
-
-class LongTest{public:LongTest()=default;size_t GetValue()const{return(mValue);};private:size_t mValue=7;};
-
-// allows loading a dictionary and choosing random values from it
-class Dictionary
-{
-public:
-	// empty dictionary
-	Dictionary() : mWords(), mIsValid(false) {};
-
-	// loads a dictionary given a path to a textfile of words
-	Dictionary(const std::filesystem::path& dictionaryTextPath) : mWords(), mIsValid(false)
-	{
-		Load(dictionaryTextPath);
-	}
-
-	// loads a new dictionary given a path to a textfile of words
-	void Load(const std::filesystem::path& dictionaryTextPath)
-	{
-		// opens a file
-		std::ifstream inFile(dictionaryTextPath);
-		if (!inFile.is_open())
-		{
-			std::cerr << "Failed to open file " << dictionaryTextPath.filename() << std::endl;
-			std::cerr << "Path was: " << dictionaryTextPath << std::endl;
-			return;
-		}
-
-		// reads in tokens out of a file
-		while (inFile >> mWords.emplace_back());
-
-		mIsValid = true;
-	}
-
-	// gives a random word from the dictionary
-	const std::string& GetRandomWord() const
-	{
-		// checks if the dictionary has been loaded
-		if (mIsValid)
-		{
-			return mWords.at(GetRandom(0ull, mWords.size() - 1));
-		}
-
-		std::cerr << "Attempted to get a random word before loading dictionary" << std::endl;
-		return "";
-	}
-
-	std::vector<std::string> GetRandomWords(size_t min, size_t max = 0) const
-	{
-		// makes the upper bound always at least the lowerbound
-		if (max < min) max = min;
-
-		// checks if the dictionary has been loaded
-		std::vector<std::string> randomWords;
-		if (mIsValid)
-		{
-			for (size_t i = 0; i < GetRandom(min, max); i++) randomWords.push_back(GetRandomWord());
-		}
-		else
-		{
-			std::cerr << "Attempted to get a random words before loading dictionary" << std::endl;
-		}
-
-		return randomWords;
-	}
-
-private:
-	// the words in this dictionary 
-	std::vector<std::string> mWords;
-
-	// whether or not the dictionary was loaded successfully
-	bool mIsValid;
-};
+// 2 dictionarys
+client::Dictionary gRegularDictionary;
+client::Dictionary gNamesDictionary;
 
 static void test_print()
 {
-	// loads 2 dictionarys for random words
-	Dictionary regularDictionary;
-	regularDictionary.Load("Assets\\words.txt");
-
-	Dictionary namesDictionary;
-	namesDictionary.Load("Assets\\names.txt");
-
 	// double vector
 	std::vector<std::vector<std::string>> vectors;
-	for (int i = 0; i < 10; i++) vectors.push_back(namesDictionary.GetRandomWords(1, 7));
+	for (int i = 0; i < 10; i++) vectors.push_back(gNamesDictionary.GetRandomWords(1, 7));
 
 	// semi-complex map
 	std::map<std::string, std::vector<std::string>> mapcontents;
-	for (int i = 0; i < 10; i++) mapcontents.emplace(regularDictionary.GetRandomWord(), namesDictionary.GetRandomWords(1, 7));
+	for (int i = 0; i < 10; i++) mapcontents.emplace(gRegularDictionary.GetRandomWord(), gNamesDictionary.GetRandomWords(1, 7));
 
 	// vector of 10 names
-	std::vector<std::string> names = namesDictionary.GetRandomWords(10);
+	std::vector<std::string> names = gNamesDictionary.GetRandomWords(10);
 
 	// simple set
 	std::unordered_map<std::string, size_t> map;
@@ -188,25 +68,54 @@ static void test_print()
 
 static void test_template()
 {
+	std::cout << "Hello" << std::endl;
+
 	gep::json::File file;
 
 	int eight = 8;
 	file.Read(eight);
+	std::cout << std::endl;
 
-	AnotherObject obj;
+	client::AnotherObject obj;
+
+	obj.SetData1(42);
+	obj.SetData2(7);
+	obj.SetString("frfr");
+
 	file.Read(obj);
+	std::cout << std::endl;
 
-	AnotherObject::NestedObject nObj;
+	obj.SetData1(54);
+	obj.SetData2(2);
+	obj.SetString("ong");
+
+	file.Read(obj);
+	std::cout << std::endl;
+
+	client::TestObject testObject;
+
+	file.Read(testObject);
+	std::cout << std::endl;
+
+	client::AnotherObject::NestedObject nObj;
 	file.Read(nObj);
+	std::cout << std::endl;
+}
+
+static void test_cout()
+{
+	std::string helloText("hello");
+
+	std::vector<std::string> strings = gRegularDictionary.GetRandomWords(10, 20);
 }
 
 int main()
 {
-	std::cout << "Hello" << std::endl;
+	// loads 2 dictionarys for random words
+	gRegularDictionary.Load("Assets\\words.txt");
+	gNamesDictionary.Load("Assets\\names.txt");
 
 	//test_print();
 	test_template();
-
-	std::string wait;
-	std::cin >> wait;
+	//test_cout();
 }

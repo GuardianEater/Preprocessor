@@ -23,10 +23,10 @@
 // allows pretty printing
 #include <Printing.hpp>
 
+#include <OutStream.hpp>
+
 // this
 #include "Preprocessor.hpp"
-
-#include "Reflection.h"
 
 #include "Timer.hpp"
 
@@ -59,31 +59,53 @@ namespace gep
         return false;
     }
 
-    void Preprocessor::PreprocessFile(const std::filesystem::path& path)
+    void Preprocessor::InitializeMetaHeader()
+    {
+        // create the meta folder if it doesnt exist 
+        std::filesystem::create_directory(".meta");
+
+        // create the meta hpp, or override the existing
+        std::ofstream outFile(".meta\\meta.hpp");
+
+        // adds pragma once to the top
+        outFile << "#pragma once\n";
+    }
+
+    int Preprocessor::PreprocessFile(const std::filesystem::path& path)
     {
         // starts a timer to measure file process speed
         Timer timer;
         timer.Start();
 
-        const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
+        mFilePath = path;
+
         
         // reads in the data from the given file
         if (!ReadFile(path))
         {
-            std::cerr << "Failed to open file: " << path.filename() << std::endl;
-            std::cerr << "Path was: " << path << std::endl;
+            gep::cerr << "Failed to open file: " << path.filename() << std::endl;
+            gep::cerr << "Path was: " << path << std::endl;
 
-            return;
+            return 1;
         }
 
         // removes all of the comments from the file
         RemoveComments();
 
         // checks if the file read in has the needed include
-        if (!HasInclude())
+        if (!HasInclude("Reflection.hpp"))
         {
-            std::cerr << "No reflection include was found for file: " << path.filename() << std::endl;
-            return;
+            gep::cerr << "No reflection include was found for file: " << path.filename() << std::endl;
+            return 2;
+        }
+
+        // now checks if the meta file is included at thee bottom of the file
+        std::string metaFileName = mFilePath.filename().stem().string() + ".meta";
+        if (!HasInclude(metaFileName))// reflection include was found
+        {
+            gep::cerr << "No meta include was found at the bottom of file "<< mFilePath.filename() << std::endl
+                      << mFilePath.filename() << " must have \"#include <.meta/" << metaFileName << ">\" at the bottom of the file" << std::endl;
+            return 3;
         }
 
         // masks all strings with '$'
@@ -97,11 +119,15 @@ namespace gep
         std::stringstream fCs(mFileContents);
         while (fCs >> mTokens.emplace_back());
 
+        // the keywords that are recognized
+        const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
+
         // helpers to maintain scope
         std::unordered_set<std::string> namedScopes = { "class", "namespace", "struct" };
-        std::vector<std::string> currentScope;
+        std::vector<std::string> scopeNames;
         size_t currentScopeLevel = 0;
 
+        // the collected meta info from each variable
         std::vector<MetaInfo> metaInfos;
 
         // creates a MetaInfo vector
@@ -110,10 +136,10 @@ namespace gep
             // maintains the current scope
             if (mTokens[i] == "{")
             {
-                // if a named scope was named add it name to the current scope
+                // if a scope was named add it name to the current scope
                 if (namedScopes.contains(mTokens[i - 2]))
                 {
-                    currentScope.push_back(mTokens[i - 1]);
+                    scopeNames.emplace_back(mTokens[i - 1]);
                 }
 
                 currentScopeLevel++;
@@ -121,16 +147,16 @@ namespace gep
             else if (mTokens[i] == "}")
             {
                 // if the current scope is a named scope remove it
-                if (currentScopeLevel == currentScope.size())
+                if (currentScopeLevel == scopeNames.size())
                 {
-                    currentScope.pop_back();
+                    scopeNames.pop_back();
                 }
 
                 currentScopeLevel--;
             }
 
             // must be inside of a class
-            if (currentScopeLevel != currentScope.size()) continue;
+            if (currentScopeLevel != scopeNames.size()) continue;
             
             // token must be recognized
             if (!metaKeyWords.contains(mTokens[i])) continue;
@@ -139,14 +165,14 @@ namespace gep
             MetaInfo& meta = metaInfos.emplace_back();
 
             // sets its class to the current scope
-            meta.mParentClass = currentScope.back();
+            meta.mParentName = scopeNames.back();
 
             // sets the full class path to all previous scopes
-            for (int j = 0; j < currentScope.size() - 1; j++)
+            for (int j = 0; j < scopeNames.size() - 1; j++)
             {
-                meta.mFullClassPath += currentScope[j] + "::";
+                meta.mFullClassPath += scopeNames[j] + "::";
             }
-            meta.mFullClassPath += meta.mParentClass;
+            meta.mFullClassPath += meta.mParentName;
 
             // move past 'keyword'
             i++;
@@ -170,13 +196,11 @@ namespace gep
             
         }
 
-        // loop through all meta info a generate a template function for them
+        // loop through all meta info and generate a template function for them
         for (int i = 0; i < metaInfos.size(); i++)
         {
             CreateTemplate(metaInfos[i]);
         }
-
-        gep::Print(mClassMap);
 
         //gep::Print(metaInfos);
 
@@ -185,11 +209,18 @@ namespace gep
         // undoes MaskStrings()
         RestoreStrings();
 
-        std::ofstream outFile("Generated\\normalized.cpp");
-        gep::Print(mFileContents, outFile);
-        outFile.close();
+        // creates the files
+        GenerateOutput();
 
-        gep::Print(timer);
+        // empties variables for multiple calls
+        Clear();
+        gep::cout << "File: " << mFilePath.filename() << " was completed in " + timer.AsString() << std::endl;
+
+        return 0;
+    }
+
+    void Preprocessor::WriteFunctionDefinition(const MetaInfo& mi, const std::string& returnType, const std::string& functionPath, bool isConst)
+    {
     }
 
     inline bool Preprocessor::ReadFile(const std::filesystem::path& path)
@@ -205,7 +236,7 @@ namespace gep
         return true;
     }
 
-    bool Preprocessor::HasInclude() const
+    bool Preprocessor::HasInclude(const std::string& includeFile) const
     {
         // locates an include directive
         const std::string includeString("#include");
@@ -228,12 +259,11 @@ namespace gep
             std::string includeContents = mFileContents.substr(includeStart, includeEnd - includeStart);
 
             // checks if the string contains the name of the reflection file
-            size_t reflectionPos = includeContents.find(GetReflectionFileName().c_str());
+            size_t reflectionPos = includeContents.find(includeFile);
 
             // if the include pos 
             if (reflectionPos != std::string::npos)
             {
-                // found Reflection.h
                 return true;
             }
 
@@ -435,20 +465,14 @@ namespace gep
 
         std::list<std::string>& lines = mClassMap[mi.mFullClassPath];
 
-        // helpers to easily write lines to the function
-        auto write_ForwardDeclaration = [&]() -> void
-            {
-                lines.push_back(std::string("class ") + mi.mParentClass + ";");
-            };
-
         auto write_FunctionDefinition = [&]() -> void
             {
-                lines.push_back(std::string("template<> ") + "inline void gep::json::File::Read(" + mi.mParentClass + "& item) const" + "{");
+                lines.push_back(std::string("template<> ") + "inline void gep::json::File::Read(" + mi.mFullClassPath + "& item) const" + "{");
             };
 
         auto write_Header = [&]() -> void
             {
-                lines.push_back(std::string("std::cout << \"") + mi.mParentClass + "\" << \":\" << std::endl;");
+                lines.push_back(std::string("std::cout << \"") + mi.mFullClassPath + "\" << \":\" << std::endl;");
             };
 
         auto write_Contents = [&](size_t location) -> void
@@ -467,7 +491,6 @@ namespace gep
         }
         else
         {
-            write_ForwardDeclaration();
             write_FunctionDefinition();
             write_Header();
             write_Contents(2);
@@ -479,6 +502,11 @@ namespace gep
         //for (const std::string& line : lines) result += "\n" + line;
 
         //return result;
+    }
+
+    inline void Preprocessor::BuildSerializingTemplate(const MetaInfo& mi)
+    {
+
     }
     
     void Preprocessor::AddPadding(std::string& fileContents, const std::string& padword) const
@@ -517,12 +545,59 @@ namespace gep
         return found;
     }
 
+    inline void Preprocessor::GenerateOutput() const
+    {
+        // the meta directory should exist becuase of the initialization call, then create the meta file
+        std::string metaFileName = mFilePath.filename().stem().string() + ".meta";
+        std::ofstream outFile(".meta\\" + metaFileName);
+
+        // adds pragma once for safe keeping and the include for the definition
+        outFile << "#pragma once\n";
+        outFile << "#include \"" + mFilePath.filename().string() + "\"\n";
+
+        // loops through all of the print objects writing the function out to the file for each
+        for (const auto& lines : mClassMap)
+        {
+            for (const auto& line : lines.second)
+            {
+                outFile << line << "\n";
+            }
+        }
+
+        // read in the main meta file
+        std::ifstream metaMainIn(".meta\\meta.hpp");
+
+        if (!metaMainIn.is_open())
+        {
+            std::cerr << "meta.hpp does not exist" << std::endl;
+            return;
+        }
+
+        // gets the contents of meta main
+        std::string metaMainContents((std::istreambuf_iterator<char>(metaMainIn)), std::istreambuf_iterator<char>());
+        metaMainIn.close();
+
+        // adds the newly generated file to meta main
+        metaMainContents += "#include \"" + metaFileName + "\"\n";
+
+        // writes out the modified file
+        std::ofstream metaMainOut(".meta\\meta.hpp");
+        metaMainOut << metaMainContents;
+    }
+
+    inline void Preprocessor::Clear()
+    {
+        mClassMap.clear();
+        mRemovedStrings.clear();
+        mTokens.clear();
+    }
+
     std::ostream& operator<<(std::ostream& os, const Preprocessor::MetaInfo& info)
     {
         os << "Type = "  << info.mType          << std::endl;
         os << "Name = "  << info.mVariableName  << std::endl;
         os << "Path = "  << info.mFullClassPath << std::endl;
-        os << "Class = " << info.mParentClass   << std::endl;
+        os << "Class = " << info.mParentName    << std::endl;
 
         return os;
     }

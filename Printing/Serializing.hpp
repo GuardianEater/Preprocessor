@@ -43,15 +43,5 @@ inline void gep::json::File::Read(Type& item) const
 	std::cout << "Read a basic object" << std::endl;
 }
 
-class AnotherObject;
-template<>
-inline void gep::json::File::Read(AnotherObject& item) const
-{
-	std::cout << "Read an AnotherObject" << std::endl;
-}
-
-//template<>
-//inline void gep::json::File::Read(AnotherObject::NestedObject& item) const
-//{
-//	std::cout << "Read an nested" << std::endl;
-//}
+// this is where all of the generated functions will be pasted
+#include <Serializing-Gen.hpp>

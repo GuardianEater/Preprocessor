@@ -77,11 +77,11 @@
     <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)Printing;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <IncludePath>$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)Printing;$(ExternalIncludePath)</ExternalIncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -148,6 +148,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="main.hpp" />
     <ClInclude Include="Random.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

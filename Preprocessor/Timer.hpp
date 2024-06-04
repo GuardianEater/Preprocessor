@@ -28,6 +28,13 @@ namespace gep
 			return std::chrono::duration_cast<duration_t>(clock_t::now() - mStartTime).count();
 		}
 
+		std::string AsString() const
+		{
+			std::stringstream result;
+			result << std::setprecision(6) << Stop();
+			return result.str();
+		}
+
 		template <typename T>
 		friend std::ostream& operator<<(std::ostream& os, const Timer<T>& timer);
 

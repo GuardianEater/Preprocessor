@@ -25,9 +25,15 @@ int main()
 {
     gep::Preprocessor preprocessor;
 
-    std::filesystem::path targetFile = std::filesystem::current_path().parent_path().append("Client").append("main.cpp");
+    preprocessor.InitializeMetaHeader();
 
-    preprocessor.PreprocessFile(targetFile);
+    std::filesystem::path targetFile1 = std::filesystem::current_path().parent_path().append("Client").append("main.hpp");
 
-    return 0;
+    int result = preprocessor.PreprocessFile(targetFile1);
+    if (result)
+    {
+        std::string wait;
+        std::cin >> wait;
+    }
+    return result;
 }

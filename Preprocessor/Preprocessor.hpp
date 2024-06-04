@@ -24,6 +24,8 @@ namespace gep
 {
 	class Preprocessor
 	{
+	public:
+
 	public: // construction
 
 		// creates the preprocessor object
@@ -45,11 +47,15 @@ namespace gep
 		// checks if a config file exists
 		bool HasConfig();
 
+		// will create the meta header if it doesnt exist or will, clear an existing one. make sure to do this prior to preprocessing
+		void InitializeMetaHeader();
+
 
 
 	public: // step 2: 
 
-		void PreprocessFile(const std::filesystem::path& path);
+		// returns exit code for whether a file was preprocessed correctly
+		int PreprocessFile(const std::filesystem::path& path);
 
 	public:
 
@@ -58,19 +64,24 @@ namespace gep
 		{
 			std::string mType;
 			std::string mVariableName;
-			std::string mParentClass;
+			std::string mParentName;
 			std::string mFullClassPath;
+			std::string mParentType;
 
 			friend std::ostream& operator<<(std::ostream& os, const MetaInfo& info);
 
 		};
 
+	private: // helpers for printing template code
+
+		void WriteFunctionDefinition(const MetaInfo& mi, const std::string& returnType, const std::string& functionPath, bool isConst);
+
 	private:
 		// reads the given file into a buffer
 		inline bool ReadFile(const std::filesystem::path& path);
 
-		// helper for PreprocessFile, determines if the file being preprocessed has the reflection include
-		inline bool HasInclude() const;
+		// helper for PreprocessFile, determines if the current file has the specified include
+		inline bool HasInclude(const std::string& includedFile) const;
 
 		// replaces all user defined character strings with '$'
 		inline void MaskStrings();
@@ -90,14 +101,25 @@ namespace gep
 		// creates a template in valid cpp code, if the mi's class path has already been written too will simply add to it
 		inline void CreateTemplate(const MetaInfo& mi);
 
+		// given meta info will create a template for serialization
+		inline void BuildSerializingTemplate(const MetaInfo& mi);
+
 		// adds spaces to both sides of all occurences of 'padword'
 		inline void AddPadding(std::string& fileContents, const std::string& padword) const;
 
 		// finds the first that shows up in fileContents 
 		inline size_t FindFirstString(const std::string& fileContents, const std::vector<std::string>& strings, size_t start = 0) const;
 
+		// outputs all of the data inside of the class map to a file
+		inline void GenerateOutput() const;
+
+		// empties most member variables
+		inline void Clear();
+
 	private:
 		std::string mFileContents;
+
+		std::filesystem::path mFilePath;
 
 		std::vector<std::string> mTokens;
 
