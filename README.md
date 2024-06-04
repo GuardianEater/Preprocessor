@@ -1,9 +1,10 @@
 ## Idea
 - I want to create a program that can be ran on source code prior to compilation to allow for more powerful code generation.
+- It will not modify any written source code, it will only modify code inside its own include.
 - I want to have a friendly user interface so there are no nasty macros wrapping code everywhere pretending to be reflection.
-- Although I want this to be performant, this is designed to be a powerful debugging tool.
 
 ## Usage
+### main.hpp
 ```cpp
 #include <Reflection.hpp>
 
@@ -21,6 +22,10 @@ private:
   serializable int mData;
   int mMoreData;
 };
+```
+### main.cpp
+```cpp
+#include "main.hpp"
 
 int main()
 {
@@ -31,12 +36,13 @@ int main()
   gep::print(obj);
 }
 ```
+### output
 ```
-ExampleClass obj:
+ExampleClass:
 {
   mData = 7
 }
-ExampleClass obj:
+ExampleClass:
 {
   mData = 42
 }
