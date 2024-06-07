@@ -22,6 +22,8 @@ private:
   serializable int mData;
   int mMoreData;
 };
+
+#include <main.meta>
 ```
 ### main.cpp
 ```cpp
