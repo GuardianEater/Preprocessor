@@ -22,6 +22,8 @@ private:
   serializable int mData;
   int mMoreData;
 };
+
+#include "main.meta"
 ```
 ### main.cpp
 ```cpp
@@ -35,8 +37,6 @@ int main()
   obj.SetData(42);
   gep::print(obj);
 }
-
-#include "main.meta"
 ```
 ### output
 ```
