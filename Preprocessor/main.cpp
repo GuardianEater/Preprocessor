@@ -18,22 +18,33 @@
 // preprocessor
 #include "Preprocessor.hpp"
 #include <Printing.hpp>
+#include <OutStream.hpp>
 
 #include <chrono>
 
-int main()
+int main(int argc, char** argv)
 {
+    // initializes the current console for some reason
+    system("");
+
+    // reads in all of the program arguments skipping 0, the program name
+    std::vector<std::string> arguments;
+    for (int i = 1; i < argc; i++)
+    {
+        arguments.push_back(argv[i]);
+    }
+
+    // create the preprocessor object
     gep::Preprocessor preprocessor;
 
+    // intialize the preprocessor
     preprocessor.InitializeMetaHeader();
 
-    std::filesystem::path targetFile1 = std::filesystem::current_path().parent_path().append("Client").append("main.hpp");
-
-    int result = preprocessor.PreprocessFile(targetFile1);
-    if (result)
+    // preprocess all of the arguments
+    for (const std::string& argument : arguments)
     {
-        std::string wait;
-        std::cin >> wait;
+        preprocessor.PreprocessFile(argument);
     }
-    return result;
+
+    return 0;
 }

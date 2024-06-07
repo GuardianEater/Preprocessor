@@ -30,7 +30,6 @@
 
 #include "Timer.hpp"
 
-
 namespace gep
 {
     Preprocessor::Preprocessor()
@@ -64,11 +63,7 @@ namespace gep
         // create the meta folder if it doesnt exist 
         std::filesystem::create_directory(".meta");
 
-        // create the meta hpp, or override the existing
-        std::ofstream outFile(".meta\\meta.hpp");
-
-        // adds pragma once to the top
-        outFile << "#pragma once\n";
+        //SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_PROCESSING);
     }
 
     int Preprocessor::PreprocessFile(const std::filesystem::path& path)
@@ -78,7 +73,6 @@ namespace gep
         timer.Start();
 
         mFilePath = path;
-
         
         // reads in the data from the given file
         if (!ReadFile(path))
@@ -92,11 +86,17 @@ namespace gep
         // removes all of the comments from the file
         RemoveComments();
 
+        if (path.filename().extension() == ".cpp")
+        {
+            gep::cwar << "File: " << path.filename() << " is a cpp file, should this be a header?" << std::endl;
+            gep::cwar << "Path was: " << path << std::endl;
+        }
+
         // checks if the file read in has the needed include
         if (!HasInclude("Reflection.hpp"))
         {
             gep::cerr << "No reflection include was found for file: " << path.filename() << std::endl;
-            return 2;
+            return 1;
         }
 
         // now checks if the meta file is included at thee bottom of the file
@@ -105,7 +105,7 @@ namespace gep
         {
             gep::cerr << "No meta include was found at the bottom of file "<< mFilePath.filename() << std::endl
                       << mFilePath.filename() << " must have \"#include <.meta/" << metaFileName << ">\" at the bottom of the file" << std::endl;
-            return 3;
+            return 1;
         }
 
         // masks all strings with '$'
@@ -214,7 +214,7 @@ namespace gep
 
         // empties variables for multiple calls
         Clear();
-        gep::cout << "File: " << mFilePath.filename() << " was completed in " + timer.AsString() << std::endl;
+        gep::cout << "File: " << mFilePath.filename() << " completed in " + timer.AsString() << " seconds" << std::endl;
 
         return 0;
     }
@@ -328,7 +328,6 @@ namespace gep
         // to count "
         // if the quote is in a comment, ignore all quotes after a // or inbetween /* and */, add edge cases as needed
         // 
-        constexpr size_t sizeMax = std::numeric_limits<size_t>::max();
 
         bool inQuotes = false;
         bool inCComment = false;
@@ -357,7 +356,7 @@ namespace gep
             
             // case for quote start/end
             else if (mFileContents[i] == '\"'     // checks if there is a quote
-                && (i - 1 != sizeMax)             // checks if its the first character in a file
+                && (i != 0)                       // checks if its the first character in a file
                 && (mFileContents[i - 1] != '\\') // checks if the previous character is a '\'
                 && !(inCComment || inCppComment)) // check if currently inside of a comment
             {
@@ -383,7 +382,7 @@ namespace gep
 
             // case for cpp-comment end
             else if (mFileContents[i] == '\n'
-                && (i - 1 != sizeMax) // checks if its the first character in a file
+                && (i != 0)           // checks if its the first character in a file
                 && inCppComment       // must be iside of a cpp comment
                 && !nextLineComment   // checks if the last character in the cpp comment '\'
                 && !inCComment        // must not be in a c comment

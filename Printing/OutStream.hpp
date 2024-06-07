@@ -37,7 +37,7 @@ namespace gep
 			if (c != -1)
 			{
 				// writes to the buffer
-				mBuffer += static_cast<char>(c);
+				mBuffer += static_cast<char>(c);				
 			}
 
 			return c;

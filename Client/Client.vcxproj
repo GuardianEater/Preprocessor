@@ -79,10 +79,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(ProjectDir);$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)Printing;$(ExternalIncludePath)</ExternalIncludePath>
+    <CustomBuildAfterTargets>Compile</CustomBuildAfterTargets>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(ProjectDir);$(SolutionDir)Preprocessor;$(IncludePath)</IncludePath>
     <ExternalIncludePath>$(SolutionDir)Printing;$(ExternalIncludePath)</ExternalIncludePath>
+    <CustomBuildAfterTargets>Compile</CustomBuildAfterTargets>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -126,6 +128,21 @@
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreLinkEvent>
+      <Message>
+      </Message>
+    </PreLinkEvent>
+    <CustomBuildStep>
+      <Command>x64\Release\Preprocessor.exe ..\Client\main.hpp</Command>
+      <Message>Running custom preprocessor</Message>
+      <RootFolder>..</RootFolder>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
@@ -143,6 +160,21 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
+    <PreLinkEvent>
+      <Message>
+      </Message>
+    </PreLinkEvent>
+    <CustomBuildStep>
+      <Command>x64\Release\Preprocessor.exe ..\Client\main.hpp</Command>
+      <Message>Running custom preprocessor</Message>
+      <RootFolder>..</RootFolder>
+    </CustomBuildStep>
+    <PreBuildEvent>
+      <Command>
+      </Command>
+      <Message>
+      </Message>
+    </PreBuildEvent>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
