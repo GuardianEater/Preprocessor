@@ -23,7 +23,7 @@ private:
   int mMoreData;
 };
 
-#include "main.meta"
+#include <main.meta>
 ```
 ### main.cpp
 ```cpp
