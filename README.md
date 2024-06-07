@@ -35,6 +35,8 @@ int main()
   obj.SetData(42);
   gep::print(obj);
 }
+
+#include "main.meta"
 ```
 ### output
 ```
