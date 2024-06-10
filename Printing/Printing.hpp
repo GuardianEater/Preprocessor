@@ -49,7 +49,11 @@ namespace gep
     // backend implementation
     namespace detail
     {
-        // compares the outermost type of a template, the following: vector<int> == vector<double>, evaluates to true
+        // note:
+        //  std::disjunction is used for 'or' statements
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// compares the outermost type of a template, the following: vector<int> == vector<double>, evaluates to true
         template <template<typename...> typename Container, typename Type>
         struct is_similar : std::false_type {};
 
@@ -62,25 +66,70 @@ namespace gep
 
 
 
-        // returns true if the type has public facing iterator 
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// same as is similar but takes multiple comparison types. works as an 'or' ////////////////////////
+        template <typename T, template <typename...> class... Templates>
+        struct is_similar_multi: std::false_type {};
+
+        template <typename T, template <typename...> class First, template <typename...> class... Rest>
+        struct is_similar_multi<T, First, Rest...> : std::disjunction<
+            is_similar<First, T>, 
+            is_similar_multi<T, Rest...>
+        > {};
+
+        // enables if similar to one of multiple other types
+        template <typename T, template <typename...> class First, template <typename...> class... Rest>
+        using enable_if_similar_multi = typename std::enable_if<is_similar_multi<T, First, Rest...>::value>::type;
+
+
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// returns true if the type has public facing iterator  ////////////////////////////////////////////
         template <typename T, typename = void>
         struct has_iterator : std::false_type {};
 
         template <typename T>
         struct has_iterator<T, std::void_t<typename T::iterator>> : std::true_type {};
 
+        // enables if the given type has an operator<<, uses has_output_operator
+        template<typename Type>
+        using enable_if_has_iterator = typename std::enable_if_t<has_iterator<Type>::value>;
 
 
-        // checks if the given type has the member function begin and end
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// used because std strings are outable and iterable, causing conflicts
+        template<typename T>
+        struct is_std_string : std::false_type {};
+
+        template<>
+        struct is_std_string<std::string> : std::true_type {};
+
+        template<typename T>
+        using enable_if_std_string = std::enable_if_t<is_std_string<T>::value>;
+
+        template<typename T>
+        using enable_if_not_std_string = std::enable_if_t<!is_std_string<T>::value>;
+
+
+        template<typename T>
+        using enable_if_iterable_and_not_std_string = std::enable_if_t<has_iterator<T>::value && !is_std_string<T>::value>;
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// checks if the given type has the member functions begin and end /////////////////////////////////
         template <typename T, typename = void>
         struct has_begin_end : std::false_type {};
 
         template <typename T>
-        struct has_begin_end<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::true_type {};
+        struct has_begin_end<T, std::void_t<
+            decltype(std::declval<T>().begin()), 
+            decltype(std::declval<T>().end())
+        >> : std::true_type {};
 
 
 
-        // checks if the given type has an operator<<
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// checks if the given type has an operator<< //////////////////////////////////////////////////////
         template<typename T, typename = void>
         struct has_output_operator : std::false_type {};
 
@@ -93,76 +142,8 @@ namespace gep
 
 
 
-        // default class for the printer if it is an unprintable type it will crash here
-        template<typename Type, typename Enable = void>
-        struct Printer
-        {
-            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
-            {
-                os << color::RED << "Attempting to print an unsupported Type" << color::RESET;
-
-                return os;
-            };
-        };
-
-        // printer for operator<< types
-        template<typename Type>
-        struct Printer<Type, enable_if_outable<Type>>
-        {
-            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
-            {
-                os << color::PEACH << item << color::RESET;
-
-                return os;
-            };
-        };
-
-        // printer for vector type
-        template<typename Type>
-        struct Printer<Type, enable_if_similar<std::vector, Type>>
-        {
-            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
-            {
-                os << color::GREEN << "Vector: {" << color::RESET;
-                for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
-                {
-                    Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
-
-                    // prints a comma and a space after every element except the last
-                    if (currentIt != std::prev(item.end(), 1))
-                    {
-                        os << color::GREEN << ", " << color::RESET;
-                    }
-                }
-                os << color::GREEN << "}" << color::RESET;
-
-                return os;
-            };
-        };
-
-        // printer for set type
-        template<typename Type>
-        struct Printer<Type, enable_if_similar<std::set, Type>>
-        {
-            static std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
-            {
-                os << color::GREEN << "Set: {" << color::RESET;
-                for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
-                {
-                    Printer<typename Type::value_type>::Print_DEPRICATED(*currentIt, os);
-
-                    // prints a comma and a space after every element except the last
-                    if (currentIt != std::prev(item.end(), 1))
-                    {
-                        os << color::GREEN << ", " << color::RESET;
-                    }
-                }
-                os << color::GREEN << "}" << color::RESET;
-
-                return os;
-            };
-        };
-
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// prints a type to the given stream with a given color and indent amount
         template<typename Type, typename Stream>
         Stream& out_color(const Type& item, Stream& os, size_t indent, const std::string& color)
         {
@@ -171,8 +152,133 @@ namespace gep
             return os;
         }
 
-        template<typename Type, typename Stream>
-        Stream& basic_print(const Type& item, Stream& os, size_t indent)
+        template<typename Type>
+        std::ostream& build_and_run_printer(std::ostream& os, size_t indent, const Type& item);
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// default class for the printer if it is an unprintable type it will crash here 
+        template<typename Type, typename Enable = void>
+        struct Printer
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                return out_color("Attempting to print an unsupported Type", os, indent, color::RED);
+            };
+        };
+
+        // printer for operator<< types
+        template<typename Type>
+        struct Printer<Type, enable_if_outable<Type>>
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                return out_color(item, os, indent, color::PEACH);
+            };
+        };
+
+        // printer for iterable objects type
+        template<typename Type>
+        struct Printer<Type, enable_if_iterable_and_not_std_string<Type>>
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                // prints the name and the leading squiggly
+                out_color("{", os, indent, color::GREEN) << std::endl;
+
+                // iterate each element recursively calling print on each element
+                for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
+                {
+                    build_and_run_printer(os, indent + 2, *currentIt) << std::endl;
+                }
+
+                out_color("}", os, indent, color::GREEN);
+
+                return os;
+            };
+        };
+
+        // printer for queue type
+        template<typename Type>
+        struct Printer<Type, enable_if_similar<std::queue, Type>>
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                out_color("{", os, indent, color::GREEN) << std::endl;
+
+                // create a temporary so the original is not modified
+                Type temp = item;
+
+                // pop items from the temp and print them one by one
+                while (!temp.empty())
+                {
+                    // prints the elements using the coresponding data structure function
+                    build_and_run_printer(os, indent + 2, temp.front()) << std::endl;
+
+                    // removes the item from the temp
+                    temp.pop();
+                }
+
+                out_color("}", os, indent, color::GREEN);
+
+                return os;
+            };
+        };
+
+        // printer for stack type
+        template<typename Type>
+        struct Printer<Type, enable_if_similar<std::stack, Type>>
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                out_color("{", os, indent, color::GREEN) << std::endl;
+
+                // create a temporary so the original is not modified
+                Type temp = item;
+
+                // pop items from the temp and print them one by one
+                while (!temp.empty())
+                {
+                    // prints the elements using the coresponding data structure function
+                    build_and_run_printer(os, indent + 2, temp.top()) << std::endl;
+
+                    // removes the item from the temp
+                    temp.pop();
+                }
+
+                out_color("}", os, indent, color::GREEN);
+
+                return os;
+            };
+        };
+
+        // printer for pair type
+        template<typename Type>
+        struct Printer<Type, enable_if_similar<std::pair, Type>>
+        {
+            static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
+            {
+                out_color("{", os, indent, color::GREEN) << std::endl;
+
+                // print the contents of the pair
+                build_and_run_printer(os, indent + 2, item.first);
+                build_and_run_printer(os, indent + 2, item.second);
+
+                out_color("}", os, indent, color::GREEN);
+
+                return os;
+            };
+        };
+
+        template<typename Type>
+        std::ostream& build_and_run_printer(std::ostream& os, size_t indent, const Type& item)
+        {
+            return Printer<Type>::basic_print(os, indent, item);
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        // prints individual items to a stream
+        template<typename Stream, typename Type>
+        Stream& basic_print_1(Stream& os, size_t indent, const Type& item)
         {
             // evaluates the type of the container ////////////////////////////////////////////////////
 
@@ -257,7 +363,7 @@ namespace gep
                 // iterate each element recursively calling print on each element
                 for (auto currentIt = item.begin(); currentIt != item.end(); currentIt++)
                 {
-                    basic_print(*currentIt, os, indent + indentAmount) << std::endl;
+                    basic_print(os, indent + indentAmount, *currentIt) << std::endl;
                 }
 
                 out_color("}", os, indent, color::GREEN);
@@ -277,8 +383,8 @@ namespace gep
                 while (!temp.empty()) 
                 {
                     // prints the elements using the coresponding data structure function
-                    if constexpr (isQueue) basic_print(temp.front(), os, indent + indentAmount) << std::endl;
-                    else                   basic_print(temp.top(),   os, indent + indentAmount) << std::endl;
+                    if constexpr (isQueue) basic_print(os, indent + indentAmount, temp.front()) << std::endl;
+                    else                   basic_print(os, indent + indentAmount, temp.top()) << std::endl;
 
                     // removes the item from the temp
                     temp.pop();
@@ -295,8 +401,8 @@ namespace gep
                 out_color("{", os, indent, color::GREEN) << std::endl;
 
                 // print the contents of the pair
-                basic_print(item.first, os, indent + indentAmount) << std::endl;
-                basic_print(item.second, os, indent + indentAmount) << std::endl;
+                basic_print(os, indent + indentAmount, item.first) << std::endl;
+                basic_print(os, indent + indentAmount, item.second) << std::endl;
 
                 out_color("}", os, indent, color::GREEN);
             }
@@ -310,23 +416,45 @@ namespace gep
             return os;
         }
 
+        // recursion base case
+        template<typename Stream>
+        Stream& basic_print_args(Stream& os, size_t indent)
+        {
+            (void)indent;
+
+            return os;
+        }
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// prints mutiple arguments to a stream
+        template<typename Stream, typename First, typename... Rest>
+        Stream& basic_print_args(Stream& os, size_t indent, First&& first, Rest&&... rest)
+        {
+            //basic_print_1(os, indent, std::forward<First>(first));
+
+            build_and_run_printer(os, indent, std::forward<First>(first));
+
+            basic_print_args(os, indent, std::forward<Rest>(rest)...);
+
+            return os;
+        }
+
     } // namespace detail
 
-    // prints out containers/types recursively
-    template <typename Type>
-    std::ostream& Print_DEPRICATED(const Type& item, std::ostream& os = std::cout)
+    template<typename... Args>
+    std::ostream& Print(std::ostream& os, Args&&... items)
     {
-        detail::Printer<Type>::Print_DEPRICATED(item, os);
+        detail::basic_print_args(os, 0, std::forward<Args>(items)...);
 
         return os;
     }
 
-    template<typename Type>
-    std::ostream& Print(const Type& item, std::ostream& os = std::cout)
+    template<typename... Args>
+    std::ostream& Print(Args&&... items)
     {
-        detail::basic_print(item, os, 0);
+        detail::basic_print_args(std::cout, 0, std::forward<Args>(items)...);
 
-        return os;
+        return std::cout;
     }
 
     //template<typename Type>

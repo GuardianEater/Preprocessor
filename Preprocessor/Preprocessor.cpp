@@ -30,6 +30,8 @@
 
 #include "Timer.hpp"
 
+#include <ShlObj.h>
+
 namespace gep
 {
     Preprocessor::Preprocessor()
@@ -49,21 +51,40 @@ namespace gep
 
     }
 
-    void Preprocessor::CreateConfig()
+    void Preprocessor::CreateConfig() const
     {
     }
 
-    bool Preprocessor::HasConfig()
+    bool Preprocessor::HasConfig() const
     {
         return false;
     }
 
-    void Preprocessor::InitializeMetaHeader()
+    void Preprocessor::InitializeMetaHeader() const
     {
         // create the meta folder if it doesnt exist 
         std::filesystem::create_directory(".meta");
 
         //SetConsoleMode(GetStdHandle(STD_OUTPUT_HANDLE), ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+
+    void Preprocessor::GenerateIncludes() const
+    {
+        std::filesystem::create_directory("include");
+
+        std::filesystem::path copyFrom = GetAppDataPath();
+        std::filesystem::path pasteTo  = std::filesystem::current_path().append("include");
+
+        for (const std::filesystem::directory_entry& entry : std::filesystem::directory_iterator(copyFrom)) 
+        {
+            const std::filesystem::path& path = entry.path();
+            if (entry.is_regular_file()) 
+            {
+                std::filesystem::copy(path, pasteTo.string() + "\\" + path.filename().string(), std::filesystem::copy_options::overwrite_existing);
+                gep::cout << path.filename() << std::endl;
+            }
+        }
+
     }
 
     int Preprocessor::PreprocessFile(const std::filesystem::path& path)
@@ -589,6 +610,40 @@ namespace gep
         mClassMap.clear();
         mRemovedStrings.clear();
         mTokens.clear();
+    }
+
+    inline std::filesystem::path Preprocessor::GetAppDataPath() const
+    {
+        std::string folderName = "gep";
+        std::string programName = "preprocessor";
+
+        PWSTR pathTemp;
+
+        if (SUCCEEDED(SHGetKnownFolderPath(FOLDERID_ProgramData, 0, nullptr, &pathTemp)))
+        {
+            std::wstring userPath = pathTemp;
+
+            CoTaskMemFree(pathTemp);
+
+            return std::filesystem::path(userPath.begin(), userPath.end()).append(folderName).append(programName);
+        }
+
+        gep::cerr << "Failed to locate users appdata folder";
+
+        return std::filesystem::path();
+    }
+
+    inline void Preprocessor::CreateAppDataFolder() const
+    {
+        std::string folderName = "gep";
+        std::string programName = "preprocessor";
+
+        std::filesystem::path programAppDataPath = GetAppDataPath();
+
+        if (!std::filesystem::exists(programAppDataPath))
+        {
+            std::filesystem::create_directories(programAppDataPath);
+        }
     }
 
     std::ostream& operator<<(std::ostream& os, const Preprocessor::MetaInfo& info)

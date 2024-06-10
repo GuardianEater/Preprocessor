@@ -25,7 +25,7 @@
 int main(int argc, char** argv)
 {
     // initializes the current console for some reason
-    system("");
+    //system("");
 
     // reads in all of the program arguments skipping 0, the program name
     std::vector<std::string> arguments;
@@ -43,7 +43,19 @@ int main(int argc, char** argv)
     // preprocess all of the arguments
     for (const std::string& argument : arguments)
     {
-        preprocessor.PreprocessFile(argument);
+        // checks if the cureent argument is a command
+        if (argument[0] == '-')
+        {
+            if (argument == "-getfiles")
+            {
+                gep::cout << "Grabbing include files..." << std::endl;
+                preprocessor.GenerateIncludes();
+            }
+        }
+        else
+        {
+            preprocessor.PreprocessFile(argument);
+        }
     }
 
     return 0;

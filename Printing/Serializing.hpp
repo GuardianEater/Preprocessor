@@ -42,6 +42,3 @@ inline void gep::json::File::Read(Type& item) const
 {
 	std::cout << "Read a basic object" << std::endl;
 }
-
-// this is where all of the generated functions will be pasted
-#include <Serializing-Gen.hpp>

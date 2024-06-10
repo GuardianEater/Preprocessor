@@ -42,14 +42,16 @@ namespace gep
 		void ReadConfig();
 
 		// creates a config from a template
-		void CreateConfig();
+		void CreateConfig() const;
 
 		// checks if a config file exists
-		bool HasConfig();
+		bool HasConfig() const;
 
 		// will create the meta header if it doesnt exist or will, clear an existing one. make sure to do this prior to preprocessing
-		void InitializeMetaHeader();
+		void InitializeMetaHeader() const;
 
+		// generates the needed interface files
+		void GenerateIncludes() const;
 
 
 	public: // step 2: 
@@ -115,6 +117,12 @@ namespace gep
 
 		// empties most member variables
 		inline void Clear();
+
+		// depricates this is handled by inno
+		inline void CreateAppDataFolder() const;
+
+		// gets the programs app data
+		inline std::filesystem::path GetAppDataPath() const;
 
 	private:
 		std::string mFileContents;

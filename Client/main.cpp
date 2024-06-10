@@ -49,19 +49,20 @@ static void test_print()
 	std::unordered_map<std::string, size_t> map;
 	for (int i = 0; i < 10; i++) map.emplace(names[i], i);
 
-	//          \
-	/           \
-	/           \
-	testing various comment types
-
+	std::vector<int> ints;
+	ints.push_back(1);
+	ints.push_back(2);
+	ints.push_back(3);
 	
-	/* cxomment // */ gep::Print(map) << std::endl; // another comment      \ fsd
-	gep::Print("Should Print") << std::endl;
-	// the line below is also a comment \
-	gep::Print(names);
-	gep::Print("lmao a // in a comment what are you going to do") << std::endl;
-	gep::Print("lmao a /* in a comment what are you going to do") << std::endl;
-	gep::Print("lmao a */ in a comment what are you going to do") << std::endl;
+	///* cxomment // */ gep::Print(map) << std::endl; // another comment      \ fsd
+	gep::Print("Should Prin", names) << std::endl;
+	gep::Print("my map = ", map);
+	gep::Print("omg multi type print = ", 54, " also eat my double ", 0.003);
+	// the line below is also a comment
+	//gep::Print(names);
+	//gep::Print("lmao a // in a comment what are you going to ", names, " string") << std::endl;
+	//gep::Print("lmao a /* in a comment what are you going to do") << std::endl;
+	//gep::Print("lmao a */ in a comment what are you going to do") << std::endl;
 
 
 }
@@ -115,7 +116,7 @@ int main()
 	gRegularDictionary.Load("Assets\\words.txt");
 	gNamesDictionary.Load("Assets\\names.txt");
 
-	//test_print();
-	test_template();
+	test_print();
+	//test_template();
 	//test_cout();
 }

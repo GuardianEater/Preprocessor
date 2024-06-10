@@ -26,8 +26,5 @@
     <ClInclude Include="Serializing.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Serializing-Gen.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
   </ItemGroup>
 </Project>

@@ -153,7 +153,6 @@
     <ClCompile Include="Printing.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="Serializing-Gen.hpp" />
     <ClInclude Include="Serializing.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
