@@ -23,7 +23,8 @@ private:
   int mMoreData;
 };
 
-#include <main.meta>
+// the name of the file followed by ".meta". for example foo.cpp would need #include <.meta/foo.meta> 
+#include <.meta/main.meta>
 ```
 ### main.cpp
 ```cpp
@@ -49,3 +50,17 @@ ExampleClass:
   mData = 42
 }
 ```
+
+## Setup
+- Download preprocessor-installer.exe
+- Run the installer
+- Open any workspace and run:
+  `> preprocessor -getfiles`
+- This will generate an include folder with the needed include files
+- Include the generated include files as shown in the example above
+- Run:
+  `> preprocessor myfile.hpp`
+- Compile and run:
+  `> g++ myfile.cpp -o a.exe`
+  `> a.exe`
+
