@@ -23,7 +23,7 @@ private:
   int mMoreData;
 };
 
-// The name of the file followed by ".meta". For example, "foo.cpp" would need "#include <.meta/foo.meta>" 
+// The name of the file followed by ".meta". For example, "foo.hpp" would need "#include <.meta/foo.meta>" 
 #include <.meta/main.meta>
 ```
 ### main.cpp
