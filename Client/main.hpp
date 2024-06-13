@@ -12,17 +12,15 @@
 
 namespace client
 {
-	class /* odd place to put a commment */ TestObject
+	struct /* odd place to put a commment */ TestObject
 	{
-	public:
 		TestObject() = default;
 
-	private:
 		printable int mInt;
 		printable double mDouble;
 		printable size_t mSize;
 		printable int mAnotherInt;
-		printable int mEvenMoreData;
+		int mEvenMoreData;
 	};
 
 	namespace math
@@ -36,7 +34,7 @@ namespace client
 			size_t Get() const { return mData; }
 
 		private:
-			printable size_t mData;
+			size_t mData;
 		};
 	}
 
@@ -122,14 +120,14 @@ namespace client
 			using prair = std::pair<std::string, size_t>;
 			using str = std::string;
 		
-			printable int mInnerData1;
-			printable int mInnerData2;
+			int mInnerData1;
+			int mInnerData2;
 
 			struct NestedStruct{int mDeeperData1;int mDeeperData2;};
 
 			class NestedClass
 			{
-				printable int mDeeperData1;
+				int mDeeperData1;
 				int mDeeperData2;
 			};
 		};
@@ -151,8 +149,8 @@ namespace client
 
 	private:
 		printable int mData1;
-		printable int mData2;
-		printable std::string mString;
+		int mData2;
+		std::string mString;
 
 	};namespace{const std::string david="hello";}class MtS{};class 
 	StM 

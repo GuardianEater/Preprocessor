@@ -69,6 +69,7 @@ namespace gep
 			std::string mParentName;
 			std::string mFullClassPath;
 			std::string mParentType;
+			std::string mKeyWord; // ie, printable, serializable...
 
 			friend std::ostream& operator<<(std::ostream& os, const MetaInfo& info);
 
@@ -77,6 +78,15 @@ namespace gep
 	private: // helpers for printing template code
 
 		void WriteFunctionDefinition(const MetaInfo& mi, const std::string& returnType, const std::string& functionPath, bool isConst);
+
+		// writes a line to the internal template 
+		inline void WriteLine(const MetaInfo& mi, size_t lineNumber, const std::string& line);
+
+		// creates a template in valid cpp code, if the mi's class path has already been written too will simply add to it
+		inline void BuildPrinterTemplate(const MetaInfo& mi);
+
+		// given meta info will create a template for serialization
+		inline void BuildSerializingTemplate(const MetaInfo& mi);
 
 	private:
 		// reads the given file into a buffer
@@ -100,12 +110,6 @@ namespace gep
 		// removes all duplicate spaces
 		inline void RemoveExtraSpaces();
 
-		// creates a template in valid cpp code, if the mi's class path has already been written too will simply add to it
-		inline void CreateTemplate(const MetaInfo& mi);
-
-		// given meta info will create a template for serialization
-		inline void BuildSerializingTemplate(const MetaInfo& mi);
-
 		// adds spaces to both sides of all occurences of 'padword'
 		inline void AddPadding(std::string& fileContents, const std::string& padword) const;
 
@@ -114,6 +118,8 @@ namespace gep
 
 		// outputs all of the data inside of the class map to a file
 		inline void GenerateOutput() const;
+
+		inline void CollectMetaData();
 
 		// empties most member variables
 		inline void Clear();

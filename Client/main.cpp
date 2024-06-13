@@ -54,52 +54,38 @@ static void test_print()
 	ints.push_back(2);
 	ints.push_back(3);
 	
-	///* cxomment // */ gep::Print(map) << std::endl; // another comment      \ fsd
-	gep::Print("Should Prin", names) << std::endl;
-	gep::Print("my map = ", map);
-	gep::Print("omg multi type print = ", 54, " also eat my double ", 0.003);
+	///* cxomment // */ gep::print(map) << std::endl; // another comment      \ fsd
+	gep::print("All of the names ar: ", names, " and then ive got nested vectors of words: ", vectors) << std::endl;
+	gep::print("my map = ", map, "your map = ", mapcontents);
+	gep::print("omg multi type print = ", 54, " also eat my double ", 0.003);
 	// the line below is also a comment
-	//gep::Print(names);
-	//gep::Print("lmao a // in a comment what are you going to ", names, " string") << std::endl;
-	//gep::Print("lmao a /* in a comment what are you going to do") << std::endl;
-	//gep::Print("lmao a */ in a comment what are you going to do") << std::endl;
+	//gep::print(names);
+	//gep::print("lmao a // in a comment what are you going to ", names, " string") << std::endl;
+	//gep::print("lmao a /* in a comment what are you going to do") << std::endl;
+	//gep::print("lmao a */ in a comment what are you going to do") << std::endl;
 
 
 }
 
 static void test_template()
 {
-	std::cout << "Hello" << std::endl;
-
-	gep::json::File file;
-
-	int eight = 8;
-	file.Read(eight);
-	std::cout << std::endl;
+	std::cout << "-----" << __func__ << "-----\n" << std::endl;
 
 	client::AnotherObject obj;
-
-	obj.SetData1(42);
-	obj.SetData2(7);
-	obj.SetString("frfr");
-
-	file.Read(obj);
-	std::cout << std::endl;
-
-	obj.SetData1(54);
+	obj.SetData1(1);
 	obj.SetData2(2);
-	obj.SetString("ong");
+	obj.SetString("Hallo :D");
 
-	file.Read(obj);
-	std::cout << std::endl;
+	client::TestObject testobj;
+	testobj.mInt = 1;
+	testobj.mAnotherInt = 2;
+	testobj.mDouble = 0.13;
+	testobj.mEvenMoreData = 42;
+	testobj.mSize = 32;
 
-	client::TestObject testObject;
+	gep::print("another objec = ", obj, " meeeee = ", testobj, "end");
 
-	file.Read(testObject);
-	std::cout << std::endl;
 
-	client::AnotherObject::NestedObject nObj;
-	file.Read(nObj);
 	std::cout << std::endl;
 }
 
@@ -116,7 +102,7 @@ int main()
 	gRegularDictionary.Load("Assets\\words.txt");
 	gNamesDictionary.Load("Assets\\names.txt");
 
-	test_print();
-	//test_template();
+	//test_print();
+	test_template();
 	//test_cout();
 }

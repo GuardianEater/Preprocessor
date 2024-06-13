@@ -23,22 +23,17 @@ namespace gep
 			template <typename Type>
 			void Write(const Type& item);
 		};
-
-		//template<typename Outer, typename Inner>
-		//struct is_nested_type {
-		//	template<typename T>
-		//	static std::true_type test(typename T::Inner*);
-
-		//	template<typename>
-		//	static std::false_type test(...);
-
-		//	static constexpr bool value = decltype(test<Outer>(nullptr))::value;
-		//};
 	}
 }
 
 template<typename Type>
 inline void gep::json::File::Read(Type& item) const
 {
-	std::cout << "Read a basic object" << std::endl;
+	std::cout << "attempting to read an unknown object" << std::endl;
+}
+
+template<typename Type>
+inline void gep::json::File::Write(const Type& item)
+{
+	std::cout << "attempting to write an unknown object" << std::endl;
 }

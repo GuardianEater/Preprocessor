@@ -140,90 +140,9 @@ namespace gep
         std::stringstream fCs(mFileContents);
         while (fCs >> mTokens.emplace_back());
 
-        // the keywords that are recognized
-        const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
+        CollectMetaData();
 
-        // helpers to maintain scope
-        std::unordered_set<std::string> namedScopes = { "class", "namespace", "struct" };
-        std::vector<std::string> scopeNames;
-        size_t currentScopeLevel = 0;
-
-        // the collected meta info from each variable
-        std::vector<MetaInfo> metaInfos;
-
-        // creates a MetaInfo vector
-        for (size_t i = 0; i < mTokens.size(); i++)
-        {
-            // maintains the current scope
-            if (mTokens[i] == "{")
-            {
-                // if a scope was named add it name to the current scope
-                if (namedScopes.contains(mTokens[i - 2]))
-                {
-                    scopeNames.emplace_back(mTokens[i - 1]);
-                }
-
-                currentScopeLevel++;
-            }
-            else if (mTokens[i] == "}")
-            {
-                // if the current scope is a named scope remove it
-                if (currentScopeLevel == scopeNames.size())
-                {
-                    scopeNames.pop_back();
-                }
-
-                currentScopeLevel--;
-            }
-
-            // must be inside of a class
-            if (currentScopeLevel != scopeNames.size()) continue;
-            
-            // token must be recognized
-            if (!metaKeyWords.contains(mTokens[i])) continue;
-            
-            // creats a meta info object
-            MetaInfo& meta = metaInfos.emplace_back();
-
-            // sets its class to the current scope
-            meta.mParentName = scopeNames.back();
-
-            // sets the full class path to all previous scopes
-            for (int j = 0; j < scopeNames.size() - 1; j++)
-            {
-                meta.mFullClassPath += scopeNames[j] + "::";
-            }
-            meta.mFullClassPath += meta.mParentName;
-
-            // move past 'keyword'
-            i++;
-
-            // collect all variable specifiers
-            std::vector<std::string> variableInfo;
-            while (mTokens[i] != ";" && mTokens[i] != "=")
-            {
-                variableInfo.push_back(mTokens[i]);
-                i++;
-            }
-
-            // the last item in the variableinfo will always be the variable name
-            meta.mVariableName = variableInfo.back();
-                    
-            // everything else is the type of the varible
-            for (int j = 0; j < variableInfo.size() - 1; j++)
-            {
-                meta.mType += variableInfo[j] + " ";
-            }
-            
-        }
-
-        // loop through all meta info and generate a template function for them
-        for (int i = 0; i < metaInfos.size(); i++)
-        {
-            CreateTemplate(metaInfos[i]);
-        }
-
-        //gep::Print(metaInfos);
+        //gep::print(metaInfos);
 
 
 
@@ -478,7 +397,42 @@ namespace gep
         }
     }
 
-    void Preprocessor::CreateTemplate(const MetaInfo& mi)
+    inline void Preprocessor::WriteLine(const MetaInfo& mi, size_t lineNumber, const std::string& line)
+    {
+        std::list<std::string>& lines = mClassMap[mi.mFullClassPath];
+
+        lines.insert(std::next(lines.begin(), lineNumber), line);
+    }
+
+    void Preprocessor::BuildPrinterTemplate(const MetaInfo& mi)
+    {
+        // if it already exists
+        bool existingClass = mClassMap.contains(mi.mFullClassPath);
+
+        std::string payload = "      gep::detail::build_and_run_printer(os, indent + 2, item." + mi.mVariableName + ") << std::endl;";
+
+        // write a print for the variable
+        if (existingClass)
+        {
+            WriteLine(mi, 6, payload);
+        }
+        // otherwise generate a function for the entire class
+        else
+        {
+            WriteLine(mi, 0, "template<>struct gep::detail::Printer<"+mi.mFullClassPath+"> ");
+            WriteLine(mi, 1, "{");
+            WriteLine(mi, 2, "  static std::ostream& basic_print(std::ostream& os, size_t indent, const "+mi.mFullClassPath+"& item)");
+            WriteLine(mi, 3, "  {");
+            WriteLine(mi, 4, "      gep::detail::out_color(\"{\", os, indent, color::GREEN) << std::endl;");
+            WriteLine(mi, 5,        payload);
+            WriteLine(mi, 6, "      gep::detail::out_color(\"}\", os, indent, color::GREEN) << std::endl;");
+            WriteLine(mi, 7, "      return os;");
+            WriteLine(mi, 8, "  }");
+            WriteLine(mi, 9, "};");
+        }
+    }
+
+    inline void Preprocessor::BuildSerializingTemplate(const MetaInfo& mi)
     {
         // if it already exists
         bool existingClass = mClassMap.contains(mi.mFullClassPath);
@@ -522,10 +476,6 @@ namespace gep
         //for (const std::string& line : lines) result += "\n" + line;
 
         //return result;
-    }
-
-    inline void Preprocessor::BuildSerializingTemplate(const MetaInfo& mi)
-    {
 
     }
     
@@ -573,7 +523,6 @@ namespace gep
 
         // adds pragma once for safe keeping and the include for the definition
         outFile << "#pragma once\n";
-        outFile << "#include \"" + mFilePath.filename().string() + "\"\n";
 
         // loops through all of the print objects writing the function out to the file for each
         for (const auto& lines : mClassMap)
@@ -583,26 +532,122 @@ namespace gep
                 outFile << line << "\n";
             }
         }
+    }
 
-        // read in the main meta file
-        std::ifstream metaMainIn(".meta\\meta.hpp");
+    inline void Preprocessor::CollectMetaData()
+    {
+        // the keywords that are recognized
+        const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
 
-        if (!metaMainIn.is_open())
+        // helpers to maintain scope
+        std::unordered_set<std::string> namedScopes = { "class", "namespace", "struct" };
+        std::vector<std::string> scopeNames;
+        size_t currentScopeLevel = 0;
+
+        // the collected meta info from each variable
+        std::vector<MetaInfo> metaInfos;
+
+        // creates a MetaInfo vector
+        for (size_t i = 0; i < mTokens.size(); i++)
         {
-            std::cerr << "meta.hpp does not exist" << std::endl;
-            return;
+            //if (mTokens[i] == "template")
+            //{
+            //    // move past "template" keyword, assuming valid syntax, guarenteed to be a "<"
+            //    i++;
+
+            //    int triangleBracketStack = 0;
+
+            //    do
+            //    {
+            //             if (mTokens[i] == "<") triangleBracketStack++;
+            //        else if (mTokens[i] == ">") triangleBracketStack--;
+            //        i++;
+            //    } 
+            //    while (triangleBracketStack);
+
+            //    // after continuing the i++ in the for loop will be called i-- prevents that
+            //    i--;
+            //    continue;
+            //}
+            // maintains the current scope
+            if (mTokens[i] == "{")
+            {
+                // if a scope was named add it name to the current scope
+                if (namedScopes.contains(mTokens[i - 2]))
+                {
+                    scopeNames.emplace_back(mTokens[i - 1]);
+                }
+
+                currentScopeLevel++;
+                continue;
+            }
+            
+            if (mTokens[i] == "}")
+            {
+                // if the current scope is a named scope remove it
+                if (currentScopeLevel == scopeNames.size())
+                {
+                    scopeNames.pop_back();
+                }
+
+                currentScopeLevel--;
+                continue;
+            }
+
+            // must be inside of a class
+            if (currentScopeLevel != scopeNames.size()) continue;
+
+            // token must be recognized
+            if (!metaKeyWords.contains(mTokens[i])) continue;
+
+            // creats a meta info object
+            MetaInfo& meta = metaInfos.emplace_back();
+
+            meta.mKeyWord = *metaKeyWords.find(mTokens[i]);
+
+            // sets its class to the current scope
+            meta.mParentName = scopeNames.back();
+
+            // sets the full class path to all previous scopes
+            for (int j = 0; j < scopeNames.size() - 1; j++)
+            {
+                meta.mFullClassPath += scopeNames[j] + "::";
+            }
+            meta.mFullClassPath += meta.mParentName;
+
+            // move past 'keyword'
+            i++;
+
+            // collect all variable specifiers
+            std::vector<std::string> variableInfo;
+            while (mTokens[i] != ";" && mTokens[i] != "=")
+            {
+                variableInfo.push_back(mTokens[i]);
+                i++;
+            }
+
+            // the last item in the variableinfo will always be the variable name
+            meta.mVariableName = variableInfo.back();
+
+            // everything else is the type of the varible
+            for (int j = 0; j < variableInfo.size() - 1; j++)
+            {
+                meta.mType += variableInfo[j] + " ";
+            }
         }
 
-        // gets the contents of meta main
-        std::string metaMainContents((std::istreambuf_iterator<char>(metaMainIn)), std::istreambuf_iterator<char>());
-        metaMainIn.close();
-
-        // adds the newly generated file to meta main
-        metaMainContents += "#include \"" + metaFileName + "\"\n";
-
-        // writes out the modified file
-        std::ofstream metaMainOut(".meta\\meta.hpp");
-        metaMainOut << metaMainContents;
+        // loop through all meta info and generate a template function for them
+        for (int i = 0; i < metaInfos.size(); i++)
+        {
+            if (metaInfos[i].mKeyWord == "printable")
+            {
+                BuildPrinterTemplate(metaInfos[i]);
+            }
+            else if (metaInfos[i].mKeyWord == "serializable")
+            {
+                BuildSerializingTemplate(metaInfos[i]);
+            }
+        }
     }
 
     inline void Preprocessor::Clear()

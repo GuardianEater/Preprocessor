@@ -138,8 +138,7 @@
       <RootFolder>..</RootFolder>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>$(SolutionDir)\x64\$(Configuration)\Preprocessor.exe $(SolutionDir)\Client\main.hpp</Command>
       <Message>
       </Message>
     </PreBuildEvent>
@@ -170,8 +169,7 @@
       <RootFolder>..</RootFolder>
     </CustomBuildStep>
     <PreBuildEvent>
-      <Command>
-      </Command>
+      <Command>$(SolutionDir)\x64\$(Configuration)\Preprocessor.exe $(SolutionDir)\Client\main.hpp</Command>
       <Message>
       </Message>
     </PreBuildEvent>

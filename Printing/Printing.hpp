@@ -112,6 +112,7 @@ namespace gep
         using enable_if_not_std_string = std::enable_if_t<!is_std_string<T>::value>;
 
 
+        // useful because strings are iterable, but usually you dont want to iterate through strings
         template<typename T>
         using enable_if_iterable_and_not_std_string = std::enable_if_t<has_iterator<T>::value && !is_std_string<T>::value>;
 
@@ -138,8 +139,30 @@ namespace gep
 
         // enables if the given type has an operator<<, uses has_output_operator
         template<typename Type>
-        using enable_if_outable = typename std::enable_if<has_output_operator<Type>::value>::type;
+        using enable_if_outable = std::enable_if_t<has_output_operator<Type>::value>;
 
+        template<typename T>
+        using enable_if_iterable_and_not_outable = std::enable_if_t<has_iterator<T>::value && !has_output_operator<T>::value>;
+
+
+
+        /////////////////////////////////////////////////////////////////////////////////////////////////////
+        /// checks if the passed type is a template
+
+        template <typename T>
+        struct is_template : std::false_type {};
+
+        // Partial specialization for template instances
+        template <template <typename...> class Template, typename... Args>
+        struct is_template<Template<Args...>> : std::true_type {};
+
+        // Enable if T is a template instantiation
+        template <typename T>
+        using enable_if_template = std::enable_if_t<is_template<T>::value>;
+
+        // Enable if T is not a template instantiation
+        template <typename T>
+        using enable_if_not_template = std::enable_if_t<!is_template<T>::value>;
 
 
         /////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -152,6 +175,7 @@ namespace gep
             return os;
         }
 
+        // forward declaration of building and running the printer so there can be 2 step recursion
         template<typename Type>
         std::ostream& build_and_run_printer(std::ostream& os, size_t indent, const Type& item);
 
@@ -178,7 +202,7 @@ namespace gep
 
         // printer for iterable objects type
         template<typename Type>
-        struct Printer<Type, enable_if_iterable_and_not_std_string<Type>>
+        struct Printer<Type, enable_if_iterable_and_not_outable<Type>>
         {
             static std::ostream& basic_print(std::ostream& os, size_t indent, const Type& item)
             {
@@ -260,8 +284,8 @@ namespace gep
                 out_color("{", os, indent, color::GREEN) << std::endl;
 
                 // print the contents of the pair
-                build_and_run_printer(os, indent + 2, item.first);
-                build_and_run_printer(os, indent + 2, item.second);
+                build_and_run_printer(os, indent + 2, item.first) << std::endl;
+                build_and_run_printer(os, indent + 2, item.second) << std::endl;
 
                 out_color("}", os, indent, color::GREEN);
 
@@ -442,7 +466,7 @@ namespace gep
     } // namespace detail
 
     template<typename... Args>
-    std::ostream& Print(std::ostream& os, Args&&... items)
+    std::ostream& print(std::ostream& os, Args&&... items)
     {
         detail::basic_print_args(os, 0, std::forward<Args>(items)...);
 
@@ -450,12 +474,29 @@ namespace gep
     }
 
     template<typename... Args>
-    std::ostream& Print(Args&&... items)
+    std::ostream& print(Args&&... items)
     {
         detail::basic_print_args(std::cout, 0, std::forward<Args>(items)...);
 
         return std::cout;
     }
+
+    template<typename... Args>
+    std::ostream& println(std::ostream& os, Args&&... items)
+    {
+        detail::basic_print_args(os, 0, std::forward<Args>(items)...) << std::endl;
+
+        return os;
+    }
+
+    template<typename... Args>
+    std::ostream& println(Args&&... items)
+    {
+        detail::basic_print_args(std::cout, 0, std::forward<Args>(items)...) << std::endl;
+
+        return std::cout;
+    }
+
 
     //template<typename Type>
     //std::wostream& PrintW(const Type& item, std::wostream& wos = std::wcout)
