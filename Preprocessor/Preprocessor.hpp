@@ -22,7 +22,7 @@
 
 namespace gep
 {
-	class Preprocessor
+	class Preprocessor 
 	{
 	public:
 
@@ -64,16 +64,108 @@ namespace gep
 		// stores info about reflected types
 		struct MetaInfo
 		{
-			std::string mType;
-			std::string mVariableName;
-			std::string mParentName;
-			std::string mFullClassPath;
-			std::string mParentType;
-			std::string mKeyWord; // ie, printable, serializable...
+			std::string mType;		    // int, double, float, etc.
+			std::string mVariableName;  // the name of the variable
+			std::string mParentName;    // the name of the class that the variable is inside of
+			std::string mFullClassPath; // the path of the class that the variable is inside of if the class is nested
+			std::string mParentType;    // the type of the structure that the variable is inside of, struct, class, union
+			std::string mKeyWord;		// ie, printable, serializable...
 
 			friend std::ostream& operator<<(std::ostream& os, const MetaInfo& info);
 
 		};
+
+		struct VariableMetaInfo
+		{
+			VariableMetaInfo()
+				: mName("")
+				, mType("")
+				, mAccess("")
+				, mDimensions(0)
+				, mIsArray(false)
+				, mIsStatic(false)
+				, mIsConst(false)
+				, mIsPointer(false)
+				, mIsReference(false)
+			{}
+
+			std::string mName;   // the name of the variable
+			std::string mType;   // the type of the variable
+			std::string mAccess; // public, protected, private
+
+			size_t mDimensions;  // the amount of arrays this variable has: "int arr1[5][6][7]" has dimension of 3
+
+			bool mIsArray;     // if an array
+			bool mIsStatic;    // if static 
+			bool mIsConst;     // if const
+			bool mIsPointer;   // if a pointer
+			bool mIsReference; // if a reference
+		};
+
+		struct FunctionMetaInfo
+		{
+			FunctionMetaInfo()
+				: mName("")
+				, mReturnType("")
+				, mAccess("")
+				, mIsVirtual(false)
+				, mIsConst(false)
+				, mIsInline(false)
+			{}
+
+			std::string mName;       // the name of the function
+			std::string mReturnType; // the return type of the function
+			std::string mAccess;     // public, protected, private
+
+			bool mIsVirtual; // if the function is virtual
+			bool mIsConst;   // if the function is const
+			bool mIsInline;  // if the function is inline
+			
+			std::vector<VariableMetaInfo> mArguments; // all of the variables that the function takes as arguments
+		};
+
+
+		struct ClassMetaInfo
+		{
+			ClassMetaInfo()
+				: mName("")
+				, mPath("")
+				, mType("")
+				, mIsFinal(false)
+			{}
+			
+			// createss a class member function
+			FunctionMetaInfo& CreateFunction()
+			{
+				return mFunctions.emplace_back();
+			}
+
+			// creates a class member variable
+			VariableMetaInfo& CreateVariable()
+			{
+				return mVariables.emplace_back();
+			}
+
+			// creates a nested class
+			ClassMetaInfo& CreateNestedClass()
+			{
+				return mClasses.emplace_back();
+			}
+
+			std::string mName; // the name of this class
+			std::string mPath; // the path to this class if it is nested
+			std::string mType; // either struct, class, or union
+
+			bool mIsFinal;     // if the class is final
+
+			std::vector<std::string> mBaseClasses;    // the base classes if this inherits from other classes
+		private:
+
+			std::vector<FunctionMetaInfo> mFunctions;
+			std::vector<VariableMetaInfo> mVariables; // the variables contained inside this class
+			std::vector<ClassMetaInfo> mClasses;
+		};
+
 
 	private: // helpers for printing template code
 
@@ -98,6 +190,8 @@ namespace gep
 		// replaces all user defined character strings with '$'
 		inline void MaskStrings();
 
+		inline void RemoveAttributeLists();
+
 		// restores all of the '$' added by MaskStrings
 		inline void RestoreStrings();
 
@@ -111,7 +205,8 @@ namespace gep
 		inline void RemoveExtraSpaces();
 
 		// adds spaces to both sides of all occurences of 'padword'
-		inline void AddPadding(std::string& fileContents, const std::string& padword) const;
+		// if a padword is in a variable it will break it.
+		inline void AddPadding(const std::string& padword);
 
 		// finds the first that shows up in fileContents 
 		inline size_t FindFirstString(const std::string& fileContents, const std::vector<std::string>& strings, size_t start = 0) const;
@@ -120,6 +215,12 @@ namespace gep
 		inline void GenerateOutput() const;
 
 		inline void CollectMetaData();
+
+		// where a class token is found pass in the class token
+		inline void GetClassMetaData(std::vector<std::string>::iterator& tokenIt, const std::string& currentPath);
+
+		// where a class "{" is found
+		inline void GetClassMemberMetaData(std::vector<std::string>::iterator& tokenIt, ClassMetaInfo& currentClass);
 
 		// empties most member variables
 		inline void Clear();

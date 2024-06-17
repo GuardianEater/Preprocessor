@@ -83,7 +83,7 @@ static void test_template()
 	testobj.mEvenMoreData = 42;
 	testobj.mSize = 32;
 
-	gep::print("another objec = ", obj, " meeeee = ", testobj, "end");
+	gep::print("another objec = ", obj, " meeeee = ", testobj, " end");
 
 
 	std::cout << std::endl;

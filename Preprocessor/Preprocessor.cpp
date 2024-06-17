@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <regex>
 #include <limits>
-
+#include <functional>
 #include <stack>
 
 // simdjson
@@ -132,13 +132,17 @@ namespace gep
         // masks all strings with '$'
         MaskStrings();
 
+        // removes everything inbetween [[...]] including the square braces
+        RemoveAttributeLists();
+
         // adds a bunch of padding and removes excess spaces
         NormalizeSpaces();
 
         //tokenizes the fileContents
-        std::string token;
         std::stringstream fCs(mFileContents);
         while (fCs >> mTokens.emplace_back());
+
+
 
         CollectMetaData();
 
@@ -232,6 +236,26 @@ namespace gep
                 mRemovedStrings.push_back(mFileContents[i]);
                 mFileContents[i] = '$';
             }
+        }
+    }
+
+    inline void Preprocessor::RemoveAttributeLists()
+    {
+        size_t rightLocation = 0;
+        size_t leftLocation = 0;
+
+        while (true)
+        {
+            // locates left side
+            leftLocation = mFileContents.find("[[", leftLocation);
+            if (leftLocation == std::string::npos) break;
+
+            // locates right side
+            rightLocation = mFileContents.find("]]", leftLocation);
+            if (rightLocation == std::string::npos) throw; // right location should always exist otherwise invalid syntax
+
+            // deletes everything inbetween
+            mFileContents.erase(leftLocation, (rightLocation - leftLocation) + 2);
         }
     }
 
@@ -358,21 +382,17 @@ namespace gep
     void Preprocessor::NormalizeSpaces()
     {
         // adds padding to a bunch of differnt strings to aid in tokenization
-        AddPadding(mFileContents, ";");
-        AddPadding(mFileContents, "{");
-        AddPadding(mFileContents, "}");
-        AddPadding(mFileContents, "(");
-        AddPadding(mFileContents, ")");
-        AddPadding(mFileContents, "namespace");
-        AddPadding(mFileContents, "struct");
-        AddPadding(mFileContents, "class");
-        AddPadding(mFileContents, "=");
-
-        // keywords
-        AddPadding(mFileContents, "serializable");
-        AddPadding(mFileContents, "printable");
-
-        // Note: cannot add a "\"" case because it would add spaces to the inside of a comment
+        AddPadding(";");
+        AddPadding("{");
+        AddPadding("}");
+        AddPadding("(");
+        AddPadding(")");
+        AddPadding(",");
+        AddPadding("*");
+        AddPadding("&");
+        AddPadding("=");
+        AddPadding("[");
+        AddPadding("]");
 
         // not necessary but should in theory make tokenization faster
         RemoveExtraSpaces();
@@ -478,21 +498,20 @@ namespace gep
         //return result;
 
     }
-    
-    void Preprocessor::AddPadding(std::string& fileContents, const std::string& padword) const
+
+    void Preprocessor::AddPadding(const std::string& padword)
     {
         size_t location = 0;
         while (true)
         {
-            location = fileContents.find(padword, location);
-
+            location = mFileContents.find(padword, location);
             if (location == std::string::npos) break;
 
             // insert a space after
-            fileContents.insert(location + padword.length(), " ");
+            mFileContents.insert(location + padword.length(), " ");
 
             // insert a space before
-            fileContents.insert(location, " ");
+            mFileContents.insert(location, " ");
 
             location += 2;
         }
@@ -540,113 +559,218 @@ namespace gep
         const std::unordered_set<std::string> metaKeyWords = { "printable", "serializable" };
 
         // helpers to maintain scope
-        std::unordered_set<std::string> namedScopes = { "class", "namespace", "struct" };
-        std::vector<std::string> scopeNames;
-        size_t currentScopeLevel = 0;
+        const std::unordered_set<std::string> structureKeyWords = { "class", "union", "struct" };
 
         // the collected meta info from each variable
         std::vector<MetaInfo> metaInfos;
 
         // creates a MetaInfo vector
-        for (size_t i = 0; i < mTokens.size(); i++)
+        for (auto tokenIt = mTokens.begin(); tokenIt != mTokens.end(); ++tokenIt)
         {
-            //if (mTokens[i] == "template")
-            //{
-            //    // move past "template" keyword, assuming valid syntax, guarenteed to be a "<"
-            //    i++;
-
-            //    int triangleBracketStack = 0;
-
-            //    do
-            //    {
-            //             if (mTokens[i] == "<") triangleBracketStack++;
-            //        else if (mTokens[i] == ">") triangleBracketStack--;
-            //        i++;
-            //    } 
-            //    while (triangleBracketStack);
-
-            //    // after continuing the i++ in the for loop will be called i-- prevents that
-            //    i--;
-            //    continue;
-            //}
-            // maintains the current scope
-            if (mTokens[i] == "{")
+            // locates the tokenIt if it exists
+            auto currentStructure = structureKeyWords.find(*tokenIt);
+            if (currentStructure != structureKeyWords.end())
             {
-                // if a scope was named add it name to the current scope
-                if (namedScopes.contains(mTokens[i - 2]))
-                {
-                    scopeNames.emplace_back(mTokens[i - 1]);
-                }
-
-                currentScopeLevel++;
-                continue;
-            }
-            
-            if (mTokens[i] == "}")
-            {
-                // if the current scope is a named scope remove it
-                if (currentScopeLevel == scopeNames.size())
-                {
-                    scopeNames.pop_back();
-                }
-
-                currentScopeLevel--;
-                continue;
-            }
-
-            // must be inside of a class
-            if (currentScopeLevel != scopeNames.size()) continue;
-
-            // token must be recognized
-            if (!metaKeyWords.contains(mTokens[i])) continue;
-
-            // creats a meta info object
-            MetaInfo& meta = metaInfos.emplace_back();
-
-            meta.mKeyWord = *metaKeyWords.find(mTokens[i]);
-
-            // sets its class to the current scope
-            meta.mParentName = scopeNames.back();
-
-            // sets the full class path to all previous scopes
-            for (int j = 0; j < scopeNames.size() - 1; j++)
-            {
-                meta.mFullClassPath += scopeNames[j] + "::";
-            }
-            meta.mFullClassPath += meta.mParentName;
-
-            // move past 'keyword'
-            i++;
-
-            // collect all variable specifiers
-            std::vector<std::string> variableInfo;
-            while (mTokens[i] != ";" && mTokens[i] != "=")
-            {
-                variableInfo.push_back(mTokens[i]);
-                i++;
-            }
-
-            // the last item in the variableinfo will always be the variable name
-            meta.mVariableName = variableInfo.back();
-
-            // everything else is the type of the varible
-            for (int j = 0; j < variableInfo.size() - 1; j++)
-            {
-                meta.mType += variableInfo[j] + " ";
+                GetClassMetaData(tokenIt, "");
             }
         }
+    }
 
-        // loop through all meta info and generate a template function for them
-        for (int i = 0; i < metaInfos.size(); i++)
+    inline void Preprocessor::GetClassMetaData(std::vector<std::string>::iterator& tokenIt, const std::string& currentPath)
+    {
+        ClassMetaInfo mi;
+        // moves to the next tokenIt
+        ++tokenIt;
+
+        // current class name
+        mi.mName = *tokenIt;
+
+        // current class path
+        mi.mPath = currentPath + "::" + mi.mName;
+
+        // move onwards
+        ++tokenIt;
+
+        // if this is encountered this is a class declaration nothing more can be gained
+        if (*tokenIt == ";")
         {
-            if (metaInfos[i].mKeyWord == "printable")
+            ++tokenIt;
+            return;
+        }
+
+        // if has final move past it
+        if (*tokenIt == "final")
+        {
+            ++tokenIt;
+            mi.mIsFinal = true;
+        }
+
+        // this class derives from another class
+        if (*tokenIt == ":")
+        {
+            do
             {
-                BuildPrinterTemplate(metaInfos[i]);
-            }
-            else if (metaInfos[i].mKeyWord == "serializable")
+                // move passed the ":"
+                ++tokenIt;
+
+                // tokenIt is currently the base classes name
+                mi.mBaseClasses.push_back(*tokenIt);
+
+                ++tokenIt;
+                // tokenIt is currently "," if there is more than one derived class
+            } while (*tokenIt == ",");
+        }
+
+        // at this point it is guarenteed to have {...};
+        // tokenIt is on "{"
+        
+        GetClassMemberMetaData(tokenIt, mi);
+    }
+
+    inline void Preprocessor::GetClassMemberMetaData(std::vector<std::string>::iterator& tokenIt, ClassMetaInfo& mi)
+    {
+        tokenIt++;
+
+        // keywords that can be encountered in a class declaration
+        std::unordered_map<std::string, bool> known =
+        {
+            { "const",     false },
+            { "static",    false },
+            { "virtual",   false },
+            { "enum",      false },
+            { "class",     false },
+            { "struct",    false },
+            { "union",     false },
+            { "typedef",   false },
+            { "using",     false },
+            { "unsigned",  false },
+            { "long",      false },
+            { "short",     false },
+            { "public",    false },
+            { "private",   false },
+            { "protected", false },
+            { "inline",    false },
+            { "&",         false },
+            { "*",         false },
+            { "friend",    false }
+        };
+
+        bool firstUnknownFound = false;
+        bool secondUnknownFound = false;
+        std::string type = "";
+
+        while (true)
+        {
+            // this is for the constructor/destructor
+            if ((mi.mName == *tokenIt) 
+                || ("~" + mi.mName) == *tokenIt)
             {
-                BuildSerializingTemplate(metaInfos[i]);
+                // parse function arguments
+                while (*tokenIt != ";") tokenIt++;
+                tokenIt++; // move past the semi-colon
+                continue;
             }
+
+            // checks if its a keyword that is skippable, also marks if the keyword was skipped
+            if (known.contains(*tokenIt))
+            {
+                known.at(*tokenIt) = true;
+                continue;
+            }
+
+
+            if (type.empty())
+            {
+                // the first unknown is the type
+                type = *tokenIt;
+                continue;
+            }
+
+            // the second unknown is the name
+            std::string name = *tokenIt; 
+                
+            bool isArray = false;  // usually not an array
+            size_t dimensions = 0; // usually has not dimensions
+
+            // move to the first token after the name
+            tokenIt++;
+
+            // case for arrays
+            if (*tokenIt == "[")
+            {
+                isArray = true;
+
+                // will move the tokenIt until the end of the square brackets
+                size_t stack = 1;
+                while (stack)
+                {
+                    tokenIt++;
+
+                    // keeps track of the stack of square brackets
+                    if (*tokenIt == "]") { --stack; ++dimensions; }
+                    else if (*tokenIt == "[") ++stack;
+                }
+
+                // move to the first token after the array
+                tokenIt++;
+            }
+
+            // case for equals
+            if (*tokenIt == "=")
+            {
+                if (isArray)
+                {
+                    // moves past all of the values
+                    size_t stack = 1;
+                    while (stack)
+                    {
+                        tokenIt++;
+
+                        // keeps track of the stack of squiggly braces
+                        if (*tokenIt == "}") --stack;
+                        else if (*tokenIt == "{") ++stack;
+                    }
+
+                    // move to the first token after the array
+                    tokenIt++;
+                }
+                else
+                {
+                    tokenIt += 2; // need to move past the = and value
+                }
+            }
+
+            // case for semicolons or commas these are where variables are actually created
+            if (*tokenIt == ";" || *tokenIt == ",")
+            {
+                VariableMetaInfo& vi = mi.CreateVariable();
+                vi.mName = name;
+                vi.mType = type;
+                vi.mIsConst = known.at("const");
+                vi.mIsStatic = known.at("static");
+                vi.mIsPointer = known.at("*");
+                vi.mIsReference = known.at("&");
+                vi.mDimensions = dimensions;
+                vi.mIsArray = isArray;
+
+                // reset the map and continue looking through the class
+                if (*tokenIt == ";")
+                {
+                    type.clear();
+                }
+
+                for (auto& pair : known) pair.second = false;
+                tokenIt++;
+                continue;
+            }
+
+
+            // ;  ---
+            // ,  ---
+            // [] ---
+            // =  ---
+            // (
+            
         }
     }
 
