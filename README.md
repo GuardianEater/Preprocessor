@@ -66,3 +66,49 @@ ExampleClass:
   `> a.exe`
 
 # Creating custom preprocessor
+```cpp
+#include <gep/preprocessor>
+
+int main()
+{
+  // create the preprocessor object
+  gep::preprocessor proc;
+
+  // loads target files as well as all dependent files
+  // ie if myfirstfile.h includes <vector> in will also load <vector>
+  proc.load("myfirstfile.h");
+  proc.load("mysecondfile.h");
+
+  gep::reflect::rnamespace global_namespace = proc.get_global_namespace();
+
+  // getting a specific variable out of a specific class
+  gep::reflect::variable testvariable = global_namespace.get_class("TestClass").get_variable("testvariable");
+
+  // getting information from that variable
+  testvariable.get_type(); // returns the type of the variable as a string
+  testvariable.is_const(); // returns true if const
+  testvariable.is_public(); // returns true if varaible is public facing
+  // ...
+
+  // looping through classes
+  for (gep::reflect::rclass& rclass : global_namespace.get_classes())
+  {
+    // looping through variables in a class
+    for (gep::reflect::variable& variable : rclass.get_variables())
+    {
+      variable.get_name(); // returns the name of the current variable
+    }
+
+    // looping through functions in a class
+    for (gep::reflect::function& function : rclass.get_functions())
+    {
+      function.get_name(); // returns the name of the current function
+
+      for (gep::reflect::variable& arg : function.get_arguments())
+      {
+        arg.get_type() // returns the type of the current arg
+      }
+    } 
+  }
+}
+```
