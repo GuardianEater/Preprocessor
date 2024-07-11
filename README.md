@@ -106,7 +106,7 @@ int main()
 
       for (gep::reflect::variable& arg : function.get_arguments())
       {
-        arg.get_type() // returns the type of the current arg
+        arg.get_type(); // returns the type of the current arg
       }
     } 
   }
